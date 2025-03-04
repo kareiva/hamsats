@@ -5,7 +5,7 @@
         <HomeLocationControl
           :home-coordinates="homeCoordinates"
           :agl-height="aglHeight"
-          @set-home="setHomeLocation"
+          @toggle-home="toggleHomeLocation"
           @update:agl-height="updateAglHeight"
         />
         <SatelliteSelector
@@ -380,26 +380,54 @@ function requestGeolocation() {
   }
 }
 
-function setHomeLocation() {
-  if (!mapInstance.value) return;
-  
-  const view = mapInstance.value.getView();
-  const center = view.getCenter();
-  
-  if (!center) return;
-  
-  const lonLat = toLonLat(center);
-  const coords = { lon: lonLat[0], lat: lonLat[1] };
-  homeCoordinates.value = coords;
-  
-  // Update the home location feature
-  if (homeLocationFeature) {
-    homeLocationFeature.setLocation(coords);
+function toggleHomeLocation() {
+  if (homeCoordinates.value) {
+    // Clear home location
+    homeCoordinates.value = null;
+    elevation.value = null;
+    aglHeight.value = 0;
+    
+    // Clear home location feature
+    if (homeLocationFeature) {
+      homeLocationFeature.clearLocation();
+    }
+    
+    // Clear cookie
+    Cookies.remove(SETTINGS_PREFIX + 'homeLocation');
+    
+    // Clear satellite selection and distances
+    selectedSatellite.value = '';
+    satellites.value.forEach(sat => {
+      sat.distance = undefined;
+    });
+    
+    // Reset map view
+    if (mapInstance.value) {
+      mapInstance.value.getView().setZoom(3);
+      mapInstance.value.getView().setCenter(fromLonLat([0, 0]));
+    }
+  } else {
+    // Set home location
+    if (!mapInstance.value) return;
+    
+    const view = mapInstance.value.getView();
+    const center = view.getCenter();
+    
+    if (!center) return;
+    
+    const lonLat = toLonLat(center);
+    const coords = { lon: lonLat[0], lat: lonLat[1] };
+    homeCoordinates.value = coords;
+    
+    // Update the home location feature
+    if (homeLocationFeature) {
+      homeLocationFeature.setLocation(coords);
+    }
+    
+    // Save to cookie and fetch elevation
+    saveSetting('homeLocation', coords);
+    fetchElevation(coords.lat, coords.lon);
   }
-  
-  // Save to cookie and fetch elevation
-  saveSetting('homeLocation', coords);
-  fetchElevation(coords.lat, coords.lon);
 }
 
 function updateAglHeight(height: number) {
@@ -700,6 +728,37 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     gap: 5px;
+    max-width: calc(100% - 20px);
+  }
+}
+
+@media (max-width: 640px) {
+  .custom-controls {
+    &.top-right {
+      width: calc(100% - 20px);
+    }
+  }
+
+  .ol-zoom {
+    left: 10px !important;
+    bottom: 60px !important;
+  }
+
+  .ol-rotate {
+    right: 10px !important;
+    bottom: 60px !important;
+  }
+
+  .ol-attribution {
+    bottom: 10px !important;
+    left: 0 !important;
+    right: 0 !important;
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.7) !important;
+    
+    &.ol-uncollapsible {
+      right: 0 !important;
+    }
   }
 }
 

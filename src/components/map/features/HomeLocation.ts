@@ -99,4 +99,11 @@ export class HomeLocationFeature {
       this.horizonFeature = null;
     }
   }
+
+  clearLocation() {
+    this.homeFeature.setGeometry(undefined);
+    if (this.horizonFeature) {
+      this.horizonFeature.setGeometry(undefined);
+    }
+  }
 } 

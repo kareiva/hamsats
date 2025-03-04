@@ -148,6 +148,7 @@ watch(filteredSatellites, () => {
   background-color: rgba(255, 255, 255, 0.7);
   padding: 8px;
   border-radius: 4px;
+  max-width: calc(100vw - 20px);
   
   .search-container {
     position: relative;
@@ -155,7 +156,7 @@ watch(filteredSatellites, () => {
     
     .search-input {
       width: 100%;
-      padding: 6px;
+      padding: 8px;
       border-radius: 4px;
       border: 1px solid #ccc;
       background-color: white;
@@ -174,7 +175,7 @@ watch(filteredSatellites, () => {
       top: 100%;
       left: 0;
       right: 0;
-      max-height: 200px;
+      max-height: min(200px, 40vh);
       overflow-y: auto;
       background-color: white;
       border: 1px solid #ccc;
@@ -183,7 +184,7 @@ watch(filteredSatellites, () => {
       z-index: 1000;
       
       .autocomplete-item {
-        padding: 6px;
+        padding: 8px;
         cursor: pointer;
         font-size: 14px;
         color: #333;
@@ -218,9 +219,22 @@ watch(filteredSatellites, () => {
       align-items: center;
       gap: 6px;
       cursor: pointer;
+      font-size: 14px;
       
       input[type="checkbox"] {
         cursor: pointer;
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .satellite-selector {
+    .search-container {
+      .autocomplete-list {
+        max-height: min(150px, 30vh);
       }
     }
   }

@@ -1,8 +1,14 @@
 <template>
   <div class="home-location-control">
-    <button @click="$emit('set-home')" class="home-button">Set Home Location</button>
-    <div class="slider-container" v-if="homeCoordinates">
-      <label for="agl-slider">AGL: {{ aglHeight }}m</label>
+    <div class="control-header">
+      <button @click="$emit('toggle-home')" class="home-button" :class="{ 'clear': homeCoordinates }">
+        {{ homeCoordinates ? 'Clear Home Location' : 'Set Home Location' }}
+      </button>
+      <button v-if="homeCoordinates" @click="showSlider = !showSlider" class="toggle-button">
+        {{ showSlider ? '−' : '+' }} AGL: {{ aglHeight }}m
+      </button>
+    </div>
+    <div v-if="homeCoordinates && showSlider" class="slider-container">
       <div class="vertical-slider-wrapper">
         <input 
           type="range" 
@@ -33,11 +39,12 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'set-home'): void;
+  (e: 'toggle-home'): void;
   (e: 'update:aglHeight', value: number): void;
 }>();
 
 const localAglHeight = ref(props.aglHeight);
+const showSlider = ref(false);
 
 watch(localAglHeight, (newValue) => {
   emit('update:aglHeight', Number(newValue));
@@ -53,34 +60,49 @@ watch(() => props.aglHeight, (newValue) => {
   display: flex;
   flex-direction: column;
   gap: 5px;
-
-  .home-button {
-    background-color: rgba(0, 60, 136, 0.7);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 8px 12px;
-    font-size: 14px;
-    cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 4px;
+  padding: 8px;
+  
+  .control-header {
+    display: flex;
+    gap: 5px;
     
-    &:hover {
-      background-color: rgba(0, 60, 136, 0.9);
+    button {
+      background-color: rgba(0, 60, 136, 0.7);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex: 1;
+      
+      &:hover {
+        background-color: rgba(0, 60, 136, 0.9);
+      }
+      
+      &.clear {
+        background-color: rgba(136, 0, 0, 0.7);
+        
+        &:hover {
+          background-color: rgba(136, 0, 0, 0.9);
+        }
+      }
+      
+      &.toggle-button {
+        background-color: rgba(0, 60, 136, 0.5);
+        
+        &:hover {
+          background-color: rgba(0, 60, 136, 0.7);
+        }
+      }
     }
   }
   
   .slider-container {
-    margin-top: 10px;
-    background-color: rgba(255, 255, 255, 0.7);
-    padding: 8px;
-    border-radius: 4px;
-    
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-size: 14px;
-      color: #333;
-      text-align: center;
-    }
+    margin-top: 5px;
     
     .vertical-slider-wrapper {
       display: flex;
@@ -155,6 +177,20 @@ watch(() => props.aglHeight, (newValue) => {
             margin-bottom: -6px;
           }
         }
+      }
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .home-location-control {
+    max-width: calc(100vw - 20px);
+    
+    .control-header {
+      flex-direction: column;
+      
+      button {
+        width: 100%;
       }
     }
   }
