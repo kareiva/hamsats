@@ -38,6 +38,7 @@
       <div v-if="homeCoordinates">
         Home Location: {{ homeCoordinates.lat.toFixed(6) }}° N, {{ homeCoordinates.lon.toFixed(6) }}° E
         <span v-if="elevation !== null"> | Elevation ASL: {{ elevation.toFixed(1) }} m | Elevation AGL: {{ aglHeight }} m</span>
+        <span v-if="selectedSatellite && satelliteInfo"> | Distance: {{ satelliteInfo.distance.toFixed(1) }} km | Elevation Angle: {{ satelliteInfo.elevationAngle.toFixed(1) }}°</span>
         <span v-else> | Fetching elevation...</span>
       </div>
       <div v-else>No home location set</div>
@@ -80,6 +81,7 @@ const satelliteFeature = ref<Feature | null>(null);
 const positionUpdateInterval = ref<number | null>(null);
 const lineOfSightFeature = ref<Feature | null>(null);
 const lineSource = ref<VectorSource | null>(null);
+const satelliteInfo = ref<{ distance: number; elevationAngle: number } | null>(null);
 
 // Watch for changes in selectedSatellite to save to session storage
 watch(selectedSatellite, (newSatellite) => {
@@ -521,6 +523,57 @@ function createCurvedLine(start: number[], end: number[], numPoints: number = 50
   return points;
 }
 
+function calculateSatelliteInfo(observerLat: number, observerLon: number, observerAlt: number,
+                              satLat: number, satLon: number, satAlt: number) {
+  // Earth radius in kilometers
+  const R = 6371;
+  
+  // Convert all angles to radians
+  const lat1 = observerLat * Math.PI / 180;
+  const lon1 = observerLon * Math.PI / 180;
+  const lat2 = satLat * Math.PI / 180;
+  const lon2 = satLon * Math.PI / 180;
+  
+  // Calculate great circle distance
+  const dLon = lon2 - lon1;
+  const dLat = lat2 - lat1;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1) * Math.cos(lat2) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const surfaceDistance = R * c;
+  
+  // Convert altitudes to kilometers
+  const h1 = observerAlt / 1000;
+  const h2 = satAlt;
+  
+  // Calculate slant range (direct 3D distance)
+  const slantRange = Math.sqrt(
+    Math.pow(R + h2, 2) + 
+    Math.pow(R + h1, 2) - 
+    2 * (R + h2) * (R + h1) * Math.cos(c)
+  );
+  
+  // Calculate elevation angle using arcsin formula
+  // This gives us the angle between the horizon plane and the satellite
+  const r1 = R + h1; // Observer radius from Earth's center
+  const r2 = R + h2; // Satellite radius from Earth's center
+  
+  // Calculate the angle between the observer's zenith and the satellite
+  const zenithAngle = Math.acos(
+    (Math.pow(slantRange, 2) + Math.pow(r1, 2) - Math.pow(r2, 2)) /
+    (2 * slantRange * r1)
+  );
+  
+  // Convert zenith angle to elevation angle (90° - zenith)
+  const elevationAngle = -(90 - (zenithAngle * 180 / Math.PI));
+  
+  return {
+    distance: slantRange,
+    elevationAngle: elevationAngle
+  };
+}
+
 function updateSatellitePosition(tle: string[]) {
   if (!satelliteFeature.value || !homeCoordinates.value) return;
 
@@ -535,16 +588,28 @@ function updateSatellitePosition(tle: string[]) {
     // Update the satellite feature's geometry
     satelliteFeature.value.setGeometry(new Point(satPoint));
     
-    // Update line of sight if we have home coordinates
-    if (homeCoordinates.value && lineOfSightFeature.value && elevation.value !== null) {
+    // Update satellite info if we have home coordinates and elevation
+    if (homeCoordinates.value && elevation.value !== null) {
       const observerAlt = elevation.value + Number(aglHeight.value);
+      const satAlt = satInfo.height; // Use height from TLE data
+      
+      satelliteInfo.value = calculateSatelliteInfo(
+        homeCoordinates.value.lat,
+        homeCoordinates.value.lon,
+        observerAlt,
+        position.lat,
+        position.lng,
+        satAlt
+      );
+      
+      // Update line of sight
       const isVisible = isSatelliteVisible(
         homeCoordinates.value.lat,
         homeCoordinates.value.lon,
         observerAlt,
         position.lat,
         position.lng,
-        satInfo.height
+        satAlt
       );
       
       // Create curved line points
@@ -555,19 +620,21 @@ function updateSatellitePosition(tle: string[]) {
       );
       
       // Update line geometry and style
-      lineOfSightFeature.value.setGeometry(new LineString(curvedPoints));
-      lineOfSightFeature.value.setStyle(
-        new Style({
-          stroke: new Stroke({
-            color: isVisible ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)',
-            width: 2,
-            lineDash: isVisible ? undefined : [5, 5]
+      if (lineOfSightFeature.value) {
+        lineOfSightFeature.value.setGeometry(new LineString(curvedPoints));
+        lineOfSightFeature.value.setStyle(
+          new Style({
+            stroke: new Stroke({
+              color: isVisible ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)',
+              width: 2,
+              lineDash: isVisible ? undefined : [5, 5]
+            })
           })
-        })
-      );
+        );
+      }
     }
     
-    console.log(`Satellite position updated: ${position.lat}, ${position.lng}`);
+    console.log(`Satellite position updated: ${position.lat}, ${position.lng}, altitude: ${satInfo.height} km`);
   } catch (error) {
     console.error('Error updating satellite position:', error);
   }
