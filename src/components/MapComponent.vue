@@ -4,6 +4,26 @@
       <div class="custom-controls top-right">
         <button @click="setHomeLocation" class="home-button">Set Home Location</button>
         <button @click="calculateVisibleHorizon" class="horizon-button" :disabled="!homeCoordinates">Show Visible Horizon</button>
+        <div class="slider-container" v-if="homeCoordinates">
+          <label for="agl-slider">AGL: {{ aglHeight }}m</label>
+          <div class="vertical-slider-wrapper">
+            <input 
+              type="range" 
+              id="agl-slider" 
+              v-model="aglHeight" 
+              min="0" 
+              max="500" 
+              step="1"
+              @change="calculateVisibleHorizon"
+              class="vertical-slider"
+            >
+            <div class="slider-markers">
+              <span class="marker top">500m</span>
+              <span class="marker middle">250m</span>
+              <span class="marker bottom">0m</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="status-bar">
@@ -42,6 +62,7 @@ const horizonSource = ref<VectorSource | null>(null);
 const homeCoordinates = ref<{ lat: number; lon: number } | null>(null);
 const elevation = ref<number | null>(null);
 const horizonFeature = ref<Feature | null>(null);
+const aglHeight = ref<number>(0); // Default AGL height is 0 meters
 
 // Watch for changes in home coordinates to fetch elevation
 watch(homeCoordinates, async (newCoords) => {
@@ -87,8 +108,8 @@ function calculateVisibleHorizon() {
     horizonFeature.value = null;
   }
   
-  // Get the observer height (elevation + 1.7m for average human height)
-  const observerHeight = elevation.value + 1.7;
+  // Get the observer height (elevation + 1.7m for average human height + AGL height)
+  const observerHeight = elevation.value + 1.7 + Number(aglHeight.value);
   
   // Calculate the horizon distance in kilometers
   const horizonDistanceKm = calculateHorizonDistance(observerHeight);
@@ -164,12 +185,24 @@ function calculateVisibleHorizon() {
 // Fetch elevation data from Open-Elevation API
 async function fetchElevation(lat: number, lon: number) {
   try {
+    // Check if we have cached elevation data
+    const cachedElevationKey = `elevation_${lat.toFixed(6)}_${lon.toFixed(6)}`;
+    const cachedElevation = sessionStorage.getItem(cachedElevationKey);
+    
+    if (cachedElevation) {
+      elevation.value = Number(cachedElevation);
+      console.log(`Using cached elevation at (${lat}, ${lon}): ${elevation.value}m`);
+      return;
+    }
+    
     // Using Open-Elevation API
     const response = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
     const data = await response.json();
     
     if (data && data.results && data.results.length > 0) {
       elevation.value = data.results[0].elevation;
+      // Save to session storage
+      sessionStorage.setItem(cachedElevationKey, elevation.value.toString());
       console.log(`Elevation at (${lat}, ${lon}): ${elevation.value}m`);
     } else {
       console.error('Invalid elevation data response:', data);
@@ -186,6 +219,9 @@ async function fetchElevation(lat: number, lon: number) {
       
       if (data && data.elevations && data.elevations.length > 0) {
         elevation.value = data.elevations[0].elevation;
+        // Save to session storage
+        const cachedElevationKey = `elevation_${lat.toFixed(6)}_${lon.toFixed(6)}`;
+        sessionStorage.setItem(cachedElevationKey, elevation.value.toString());
         console.log(`Elevation (fallback) at (${lat}, ${lon}): ${elevation.value}m`);
       }
     } catch (fallbackError) {
@@ -398,6 +434,99 @@ onMounted(() => {
     &:disabled {
       background-color: rgba(0, 60, 136, 0.3);
       cursor: not-allowed;
+    }
+  }
+  
+  .slider-container {
+    margin-top: 10px;
+    background-color: rgba(255, 255, 255, 0.7);
+    padding: 8px;
+    border-radius: 4px;
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+      color: #333;
+      text-align: center;
+    }
+    
+    .vertical-slider-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 150px;
+      position: relative;
+      margin: 10px auto;
+      width: 100%;
+      
+      .vertical-slider {
+        width: 150px;
+        margin: 0;
+        transform: rotate(-90deg);
+        transform-origin: center;
+        position: absolute;
+        left: calc(50% - 75px);
+        
+        /* Webkit browsers specific styling */
+        &::-webkit-slider-thumb {
+          height: 16px;
+          width: 16px;
+          border-radius: 50%;
+          background: rgba(0, 60, 136, 0.9);
+          cursor: pointer;
+          -webkit-appearance: none;
+          margin-top: -6px;
+        }
+        
+        &::-webkit-slider-runnable-track {
+          height: 4px;
+          background: #ddd;
+          border-radius: 2px;
+        }
+        
+        /* Firefox specific styling */
+        &::-moz-range-thumb {
+          height: 16px;
+          width: 16px;
+          border-radius: 50%;
+          background: rgba(0, 60, 136, 0.9);
+          cursor: pointer;
+        }
+        
+        &::-moz-range-track {
+          height: 4px;
+          background: #ddd;
+          border-radius: 2px;
+        }
+      }
+      
+      .slider-markers {
+        position: absolute;
+        right: 10px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #333;
+        
+        .marker {
+          line-height: 1;
+          
+          &.top {
+            margin-top: -6px;
+          }
+          
+          &.middle {
+            margin-top: 0;
+          }
+          
+          &.bottom {
+            margin-bottom: -6px;
+          }
+        }
+      }
     }
   }
 }
