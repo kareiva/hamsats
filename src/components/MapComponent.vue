@@ -977,7 +977,7 @@ function startSatelliteTracking(satelliteName: string) {
 
   // Create a new feature for the satellite
   satelliteFeature.value = new Feature();
-  satelliteFeature.value.setStyle(
+  satelliteFeature.value.setStyle([
     new Style({
       image: new Icon({
         src: satelliteIcon,
@@ -985,8 +985,28 @@ function startSatelliteTracking(satelliteName: string) {
         anchor: [0.5, 0.5],
         rotation: Math.PI / 4
       })
+    }),
+    new Style({
+      text: new Text({
+        text: satelliteName,
+        font: '14px monospace',
+        fill: new Fill({
+          color: '#388E3C'
+        }),
+        stroke: new Stroke({
+          color: 'white',
+          width: 3
+        }),
+        backgroundFill: new Fill({
+          color: 'rgba(255, 255, 255, 0.8)'
+        }),
+        padding: [5, 5, 5, 5],
+        offsetX: 20,
+        textAlign: 'left',
+        textBaseline: 'middle'
+      })
     })
-  );
+  ]);
 
   // Create satellite horizon feature
   satelliteHorizonFeature.value = new Feature();
