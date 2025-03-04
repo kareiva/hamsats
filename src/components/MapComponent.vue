@@ -82,6 +82,7 @@ const positionUpdateInterval = ref<number | null>(null);
 const lineOfSightFeature = ref<Feature | null>(null);
 const lineSource = ref<VectorSource | null>(null);
 const satelliteInfo = ref<{ distance: number; elevationAngle: number } | null>(null);
+const satelliteHorizonFeature = ref<Feature | null>(null);
 
 // Watch for changes in selectedSatellite to save to session storage
 watch(selectedSatellite, (newSatellite) => {
@@ -574,6 +575,44 @@ function calculateSatelliteInfo(observerLat: number, observerLon: number, observ
   };
 }
 
+function calculateSatelliteHorizonPoints(satLat: number, satLon: number, satAlt: number): number[][] {
+  const R = 6371; // Earth radius in km
+  const points: number[][] = [];
+  const numPoints = 50;
+  
+  // Calculate horizon distance from satellite
+  const horizonDistance = Math.sqrt(Math.pow(R + satAlt, 2) - Math.pow(R, 2));
+  
+  // Create points in a circle around the satellite
+  for (let i = 0; i < numPoints; i++) {
+    const angle = (2 * Math.PI * i) / numPoints;
+    const bearing = angle * (180 / Math.PI);
+    
+    // Calculate point at horizonDistance km from satellite at given bearing
+    const lat1 = satLat * Math.PI / 180;
+    const lon1 = satLon * Math.PI / 180;
+    
+    const angularDistance = horizonDistance / R;
+    
+    const lat2 = Math.asin(
+      Math.sin(lat1) * Math.cos(angularDistance) +
+      Math.cos(lat1) * Math.sin(angularDistance) * Math.cos(angle)
+    );
+    
+    const lon2 = lon1 + Math.atan2(
+      Math.sin(angle) * Math.sin(angularDistance) * Math.cos(lat1),
+      Math.cos(angularDistance) - Math.sin(lat1) * Math.sin(lat2)
+    );
+    
+    points.push(fromLonLat([lon2 * 180 / Math.PI, lat2 * 180 / Math.PI]));
+  }
+  
+  // Close the polygon by adding the first point again
+  points.push(points[0]);
+  
+  return points;
+}
+
 function updateSatellitePosition(tle: string[]) {
   if (!satelliteFeature.value || !homeCoordinates.value) return;
 
@@ -587,6 +626,12 @@ function updateSatellitePosition(tle: string[]) {
     
     // Update the satellite feature's geometry
     satelliteFeature.value.setGeometry(new Point(satPoint));
+    
+    // Update satellite horizon polygon
+    if (satelliteHorizonFeature.value) {
+      const horizonPoints = calculateSatelliteHorizonPoints(position.lat, position.lng, satInfo.height);
+      satelliteHorizonFeature.value.setGeometry(new Polygon([horizonPoints]));
+    }
     
     // Update satellite info if we have home coordinates and elevation
     if (homeCoordinates.value && elevation.value !== null) {
@@ -661,11 +706,26 @@ function startSatelliteTracking(satelliteName: string) {
     })
   );
 
+  // Create satellite horizon feature
+  satelliteHorizonFeature.value = new Feature();
+  satelliteHorizonFeature.value.setStyle(
+    new Style({
+      fill: new Fill({
+        color: 'rgba(255, 193, 7, 0.2)' // Semi-transparent amber color
+      }),
+      stroke: new Stroke({
+        color: 'rgba(255, 193, 7, 0.5)',
+        width: 1
+      })
+    })
+  );
+
   // Create line of sight feature
   lineOfSightFeature.value = new Feature();
   
   // Add features to sources
   vectorSource.value.addFeature(satelliteFeature.value);
+  vectorSource.value.addFeature(satelliteHorizonFeature.value);
   lineSource.value.addFeature(lineOfSightFeature.value);
 
   // Update position immediately and then every second
@@ -684,6 +744,11 @@ function stopSatelliteTracking() {
   if (satelliteFeature.value && vectorSource.value) {
     vectorSource.value.removeFeature(satelliteFeature.value);
     satelliteFeature.value = null;
+  }
+
+  if (satelliteHorizonFeature.value && vectorSource.value) {
+    vectorSource.value.removeFeature(satelliteHorizonFeature.value);
+    satelliteHorizonFeature.value = null;
   }
 
   if (lineOfSightFeature.value && lineSource.value) {
