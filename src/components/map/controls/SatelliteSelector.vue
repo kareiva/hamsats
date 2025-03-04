@@ -8,13 +8,19 @@
         v-model="searchQuery"
         @focus="showAutocomplete = true"
         @input="onSearchInput"
+        @keydown.down.prevent="navigateResults(1)"
+        @keydown.up.prevent="navigateResults(-1)"
+        @keydown.enter.prevent="selectHighlighted"
       />
       <div class="autocomplete-list" v-if="showAutocomplete && filteredSatellites.length > 0">
         <div
-          v-for="sat in filteredSatellites"
+          v-for="(sat, index) in filteredSatellites"
           :key="sat.name"
           class="autocomplete-item"
-          :class="{ 'selected': sat.name === selectedSatellite }"
+          :class="{ 
+            'selected': sat.name === selectedSatellite,
+            'highlighted': index === highlightedIndex 
+          }"
           @click="selectSatellite(sat.name)"
         >
           {{ sat.name }}{{ sat.distance !== undefined ? ` (${sat.distance.toFixed(0)} km)` : '' }}
@@ -59,18 +65,42 @@ const emit = defineEmits<{
 const searchQuery = ref('');
 const showAutocomplete = ref(false);
 const localShowPath = ref(props.showPath);
+const highlightedIndex = ref(-1);
 
 const filteredSatellites = computed(() => {
   const query = searchQuery.value.toLowerCase();
   return props.satellites
     .filter(sat => sat.name.toLowerCase().includes(query))
-    .slice(0, 10); // Limit to 10 results for better performance
+    .slice(0, 10);
 });
 
 function selectSatellite(name: string) {
   emit('update:selectedSatellite', name);
   searchQuery.value = name;
   showAutocomplete.value = false;
+  highlightedIndex.value = -1;
+}
+
+function navigateResults(direction: number) {
+  if (!showAutocomplete.value || filteredSatellites.value.length === 0) {
+    showAutocomplete.value = true;
+    highlightedIndex.value = 0;
+    return;
+  }
+
+  highlightedIndex.value = Math.max(
+    -1,
+    Math.min(
+      filteredSatellites.value.length - 1,
+      highlightedIndex.value + direction
+    )
+  );
+}
+
+function selectHighlighted() {
+  if (highlightedIndex.value >= 0 && highlightedIndex.value < filteredSatellites.value.length) {
+    selectSatellite(filteredSatellites.value[highlightedIndex.value].name);
+  }
 }
 
 function onSearchInput() {
@@ -78,6 +108,7 @@ function onSearchInput() {
     emit('update:selectedSatellite', '');
   }
   showAutocomplete.value = true;
+  highlightedIndex.value = -1;
 }
 
 // Close autocomplete when clicking outside
@@ -85,6 +116,7 @@ window.addEventListener('click', (e: MouseEvent) => {
   const target = e.target as HTMLElement;
   if (!target.closest('.satellite-selector')) {
     showAutocomplete.value = false;
+    highlightedIndex.value = -1;
   }
 });
 
@@ -103,6 +135,10 @@ watch(() => props.selectedSatellite, (newValue) => {
       searchQuery.value = satellite.name;
     }
   }
+});
+
+watch(filteredSatellites, () => {
+  highlightedIndex.value = -1;
 });
 </script>
 
@@ -156,8 +192,16 @@ watch(() => props.selectedSatellite, (newValue) => {
           background-color: rgba(0, 60, 136, 0.1);
         }
         
+        &.highlighted {
+          background-color: rgba(0, 60, 136, 0.1);
+        }
+        
         &.selected {
           background-color: rgba(0, 60, 136, 0.2);
+        }
+        
+        &.highlighted.selected {
+          background-color: rgba(0, 60, 136, 0.3);
         }
       }
     }
