@@ -141,16 +141,20 @@ function calculateVisibleHorizon() {
     
     // Create a feature with the circle geometry
     horizonFeature.value = new Feature({
-      geometry: circleGeometry
+      geometry: circleGeometry,
+      properties: {
+        animationTimestamp: Date.now() // Add timestamp for animation
+      }
     });
     
-    // Style the horizon with blue colors
+    // Style the horizon with blue colors and animation class
     horizonFeature.value.setStyle(
       new Style({
         fill: new Fill({
           color: 'rgba(0, 70, 255, 0.33)' // Blue fill with 33% opacity
         }),
-        zIndex: 100 // Ensure high z-index
+        zIndex: 100, // Ensure high z-index
+        className: 'horizon-feature fade-in' // Add classes for styling
       })
     );
     
@@ -344,7 +348,8 @@ onMounted(() => {
       fill: new Fill({
         color: 'rgba(0, 70, 255, 0.33)' // Blue fill with 33% opacity
       })
-    })
+    }),
+    className: 'horizon-layer' // Add class for CSS targeting
   });
   
   // Create the map with proper view settings
@@ -610,6 +615,22 @@ onMounted(() => {
     color: #333;
     text-shadow: 0 0 2px white;
   }
+  
+  /* Hide the collapse button */
+  button {
+    display: none !important;
+  }
+  
+  /* Always show the attribution text */
+  &.ol-collapsed ul {
+    display: block !important;
+  }
+  
+  /* Remove padding that was meant for the button */
+  &.ol-collapsed {
+    padding: 0 !important;
+    background: none !important;
+  }
 }
 
 /* Ensure the OpenLayers viewport doesn't override our positioning */
@@ -631,5 +652,19 @@ onMounted(() => {
   position: absolute;
   width: 100%;
   height: 100%;
+}
+
+/* Horizon feature fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.horizon-layer canvas {
+  animation: fadeIn 1s ease-in-out;
 }
 </style> 
