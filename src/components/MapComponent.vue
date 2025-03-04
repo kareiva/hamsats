@@ -31,6 +31,11 @@
               {{ sat.name }}
             </option>
           </select>
+          <div class="path-control" v-if="selectedSatellite">
+            <label>
+              <input type="checkbox" v-model="showPath"> Show future path
+            </label>
+          </div>
         </div>
       </div>
     </div>
@@ -63,7 +68,7 @@ import { Style, Icon, Fill, Stroke, Text } from 'ol/style';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import Translate from 'ol/interaction/Translate';
 import { circular as createCircularPolygon } from 'ol/geom/Polygon';
-import { getLatLngObj, getSatelliteInfo } from 'tle.js';
+import { getLatLngObj, getSatelliteInfo, getGroundTracks } from 'tle.js';
 import satelliteIcon from '@/assets/satellite.svg';
 import LineString from 'ol/geom/LineString';
 
@@ -83,6 +88,9 @@ const lineOfSightFeature = ref<Feature | null>(null);
 const lineSource = ref<VectorSource | null>(null);
 const satelliteInfo = ref<{ distance: number; elevationAngle: number } | null>(null);
 const satelliteHorizonFeature = ref<Feature | null>(null);
+const showPath = ref<boolean>(false);
+const pathFeatures = ref<Feature[]>([]);
+const pathUpdateInterval = ref<number | null>(null);
 
 // Watch for changes in selectedSatellite to save to session storage
 watch(selectedSatellite, (newSatellite) => {
@@ -777,6 +785,53 @@ function updateSatellitePosition(tle: string[]) {
   }
 }
 
+async function updateSatellitePath(tle: string[]) {
+  if (!vectorSource.value || !showPath.value) return;
+  
+  // Clear existing path features
+  pathFeatures.value.forEach(feature => {
+    if (vectorSource.value) vectorSource.value.removeFeature(feature);
+  });
+  pathFeatures.value = [];
+  
+  try {
+    // Calculate positions for the next hour (60 minutes)
+    const positions = [];
+    const now = new Date();
+    
+    for (let i = 1; i <= 120; i++) {
+      const futureTime = new Date(now.getTime() + i * 120000); // i minutes in the future
+      const position = getLatLngObj(tle, futureTime);
+      positions.push(position);
+    }
+    
+    // Create features for each position
+    positions.forEach((pos, index) => {
+      const point = fromLonLat([pos.lng, pos.lat]);
+      const feature = new Feature({
+        geometry: new Point(point)
+      });
+      
+      // Style with decreasing opacity based on time
+      const opacity = 1 - (index / 120);
+      feature.setStyle(new Style({
+        image: new Icon({
+          src: satelliteIcon,
+          scale: 1,
+          anchor: [0.5, 0.5],
+          rotation: Math.PI / 4,
+          opacity: opacity * 0.5
+        })
+      }));
+      
+      pathFeatures.value.push(feature);
+      if (vectorSource.value) vectorSource.value.addFeature(feature);
+    });
+  } catch (error) {
+    console.error('Error updating satellite path:', error);
+  }
+}
+
 function startSatelliteTracking(satelliteName: string) {
   // Stop any existing tracking
   stopSatelliteTracking();
@@ -825,6 +880,14 @@ function startSatelliteTracking(satelliteName: string) {
   positionUpdateInterval.value = window.setInterval(() => {
     updateSatellitePosition(satellite.tle);
   }, 1000);
+
+  // Start path updates if enabled
+  if (showPath.value) {
+    updateSatellitePath(satellite.tle);
+    pathUpdateInterval.value = window.setInterval(() => {
+      updateSatellitePath(satellite.tle);
+    }, 60000); // Update every minute
+  }
 }
 
 function stopSatelliteTracking() {
@@ -847,7 +910,42 @@ function stopSatelliteTracking() {
     lineSource.value.removeFeature(lineOfSightFeature.value);
     lineOfSightFeature.value = null;
   }
+
+  // Clear path features and interval
+  if (pathUpdateInterval.value) {
+    clearInterval(pathUpdateInterval.value);
+    pathUpdateInterval.value = null;
+  }
+  
+  pathFeatures.value.forEach(feature => {
+    if (vectorSource.value) vectorSource.value.removeFeature(feature);
+  });
+  pathFeatures.value = [];
 }
+
+// Add watch for showPath changes
+watch(showPath, (newValue) => {
+  if (!selectedSatellite.value) return;
+  
+  const satellite = satellites.value.find(sat => sat.name === selectedSatellite.value);
+  if (!satellite) return;
+  
+  if (newValue) {
+    updateSatellitePath(satellite.tle);
+    pathUpdateInterval.value = window.setInterval(() => {
+      updateSatellitePath(satellite.tle);
+    }, 60000);
+  } else {
+    if (pathUpdateInterval.value) {
+      clearInterval(pathUpdateInterval.value);
+      pathUpdateInterval.value = null;
+    }
+    pathFeatures.value.forEach(feature => {
+      if (vectorSource.value) vectorSource.value.removeFeature(feature);
+    });
+    pathFeatures.value = [];
+  }
+});
 
 // Clean up on component unmount
 onUnmounted(() => {
@@ -1113,6 +1211,24 @@ onMounted(() => {
         outline: none;
         border-color: rgba(0, 60, 136, 0.7);
         box-shadow: 0 0 0 2px rgba(0, 60, 136, 0.3);
+      }
+    }
+    
+    .path-control {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        
+        input[type="checkbox"] {
+          cursor: pointer;
+        }
       }
     }
   }
