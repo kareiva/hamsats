@@ -32,13 +32,33 @@ import Map from 'ol/Map';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import Translate from 'ol/interaction/Translate';
 import { getLatLngObj, getSatelliteInfo } from 'tle.js';
+import Cookies from 'js-cookie';
 import { createMapLayers, initializeMap } from './utils/mapSetup';
-import { calculateSatelliteInfo, calculateHorizonDistance } from './utils/calculations';
+import { calculateSatelliteInfo } from './utils/calculations';
 import { HomeLocationFeature, type HomeLocationCoordinates } from './features/HomeLocation';
 import { SatelliteFeature, type SatelliteInfo } from './features/SatelliteFeature';
+import { NearestSatellitesFeature } from './features/NearestSatellitesFeature';
 import HomeLocationControl from './controls/HomeLocationControl.vue';
 import SatelliteSelector from './controls/SatelliteSelector.vue';
 import StatusBar from './StatusBar.vue';
+
+// Add cookie utility functions at the top of the script
+const COOKIE_EXPIRY = 30; // days
+const SETTINGS_PREFIX = 'satgazer_';
+
+function saveSetting(key: string, value: any) {
+  Cookies.set(SETTINGS_PREFIX + key, JSON.stringify(value), { expires: COOKIE_EXPIRY });
+}
+
+function loadSetting<T>(key: string, defaultValue: T): T {
+  const value = Cookies.get(SETTINGS_PREFIX + key);
+  if (value === undefined) return defaultValue;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return defaultValue;
+  }
+}
 
 // State
 const mapInstance = ref<Map | null>(null);
@@ -50,6 +70,7 @@ const satellites = ref<{ name: string; tle: [string, string]; position?: { lat: 
 const showPath = ref<boolean>(false);
 const satelliteInfo = ref<SatelliteInfo | null>(null);
 const currentSatelliteFeature = ref<SatelliteFeature | null>(null);
+const nearestSatellitesFeature = ref<NearestSatellitesFeature | null>(null);
 
 // Features and Layers
 let homeLocationFeature: HomeLocationFeature;
@@ -101,15 +122,62 @@ async function loadSatellites() {
     console.log(`Loaded ${satelliteList.length} satellites from file`);
     
     loadSavedSatelliteSelection();
+
+    // Initialize nearest satellites if no satellite is selected and we have home coordinates
+    if (!selectedSatellite.value && homeCoordinates.value && satellites.value.length > 0) {
+      if (!nearestSatellitesFeature.value) {
+        nearestSatellitesFeature.value = new NearestSatellitesFeature(mapLayers.vectorSource);
+      }
+      
+      const nearestSats = satellites.value
+        .filter(sat => sat.distance !== undefined)
+        .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity))
+        .slice(0, 5);
+
+      nearestSatellitesFeature.value.updateSatellites(nearestSats);
+      nearestSatellitesFeature.value.startTracking();
+
+      // Calculate the extent to include home and all nearest satellites
+      if (mapInstance.value && nearestSats.length > 0) {
+        const homePoint = fromLonLat([homeCoordinates.value.lon, homeCoordinates.value.lat]);
+        let minX = homePoint[0];
+        let minY = homePoint[1];
+        let maxX = homePoint[0];
+        let maxY = homePoint[1];
+
+        // Include all nearest satellites in the extent
+        nearestSats.forEach(sat => {
+          if (sat.position) {
+            const satPoint = fromLonLat([sat.position.lng, sat.position.lat]);
+            minX = Math.min(minX, satPoint[0]);
+            minY = Math.min(minY, satPoint[1]);
+            maxX = Math.max(maxX, satPoint[0]);
+            maxY = Math.max(maxY, satPoint[1]);
+          }
+        });
+
+        // Add padding to the extent
+        const width = maxX - minX;
+        const height = maxY - minY;
+        const padding = [width * 0.2, height * 0.2];
+        const extent = [
+          minX - padding[0],
+          minY - padding[1],
+          maxX + padding[0],
+          maxY + padding[1]
+        ];
+
+        // Fit the view to include all points
+        mapInstance.value.getView().fit(extent, {
+          duration: 1000,
+          padding: [50, 50, 50, 50]
+        });
+      }
+    }
   } catch (error) {
     console.error('Error loading satellites:', error);
-    satellites.value = [
-      { name: 'ISS (ZARYA)', tle: ['1 25544U 98067A   17206.18396726  .00001961  00000-0  36771-4 0  9993', '2 25544  51.6400 208.9163 0006317  69.9862  25.2906 15.54225995 67660'] },
-      { name: 'NOAA-19', tle: ['1 33591U 09005A   23305.51689030  .00000076  00000+0  65128-4 0  9992', '2 33591  99.1949 150.2287 0013223 223.4876 136.5274 14.12501878 761962'] },
-      { name: 'AMSAT-OSCAR 7', tle: ['1 07530U 74089B   23305.84246462 -.00000030  00000+0  10000-3 0  9996', '2 07530 101.4038 287.7831 0011925 349.4315  10.6549 12.53637849 26729'] }
-    ];
-    
-    loadSavedSatelliteSelection();
+    satellites.value = [];
+    selectedSatellite.value = '';
   }
 }
 
@@ -140,7 +208,7 @@ function updateSatelliteDistances(satelliteList: typeof satellites.value) {
 
 // Function to load saved satellite selection or set default
 function loadSavedSatelliteSelection() {
-  const savedSatellite = sessionStorage.getItem('selectedSatellite');
+  const savedSatellite = loadSetting<string>('selectedSatellite', '');
   
   if (savedSatellite) {
     const satelliteExists = satellites.value.some(sat => sat.name === savedSatellite);
@@ -151,28 +219,18 @@ function loadSavedSatelliteSelection() {
     }
   }
   
-  setDefaultSatellite();
-}
-
-// Function to set default satellite to ISS
-function setDefaultSatellite() {
-  const issIndex = satellites.value.findIndex(sat => sat.name.includes('ISS'));
-  
-  if (issIndex >= 0) {
-    selectedSatellite.value = satellites.value[issIndex].name;
-  } else if (satellites.value.length > 0) {
-    selectedSatellite.value = satellites.value[0].name;
-  }
+  // If no saved selection, keep it empty to show nearest satellites
+  selectedSatellite.value = '';
 }
 
 // Fetch elevation data from Open-Elevation API
 async function fetchElevation(lat: number, lon: number) {
   try {
     const cachedElevationKey = `elevation_${lat.toFixed(6)}_${lon.toFixed(6)}`;
-    const cachedElevation = sessionStorage.getItem(cachedElevationKey);
+    const cachedElevation = loadSetting<number | null>(cachedElevationKey, null);
     
     if (cachedElevation) {
-      elevation.value = Number(cachedElevation);
+      elevation.value = cachedElevation;
       return;
     }
     
@@ -182,7 +240,7 @@ async function fetchElevation(lat: number, lon: number) {
     if (data && data.results && data.results.length > 0) {
       elevation.value = data.results[0].elevation;
       if (elevation.value !== null) {
-        sessionStorage.setItem(cachedElevationKey, elevation.value.toString());
+        saveSetting(cachedElevationKey, elevation.value);
       }
     }
   } catch (error) {
@@ -206,26 +264,13 @@ function requestGeolocation() {
           homeLocationFeature.setLocation(coords);
         }
         
-        // Center the map on the location and set zoom based on horizon distance
+        // Center the map on the location
         if (mapInstance.value) {
           const point = fromLonLat([coords.lon, coords.lat]);
           mapInstance.value.getView().setCenter(point);
-          mapInstance.value.getView().setZoom(9); // Set fixed zoom level for regional view
-          
-          const horizonDistance = calculateHorizonDistance(aglHeight.value);
-          const view = mapInstance.value.getView();
-          const mapSize = mapInstance.value.getSize();
-          if (mapSize) {
-            const targetWidth = horizonDistance * 1000 * 12; // Make horizon diameter 1/6 of map width (2 for diameter * 6 for scale)
-            const resolution = targetWidth / mapSize[0];
-            const zoom = view.getZoomForResolution(resolution);
-            if (zoom) {
-              view.setZoom(zoom);
-            }
-          }
         }
         
-        sessionStorage.setItem('homeLocation', JSON.stringify(coords));
+        saveSetting('homeLocation', coords);
         fetchElevation(coords.lat, coords.lon);
       },
       (error) => {
@@ -257,8 +302,8 @@ function setHomeLocation() {
     homeLocationFeature.setLocation(coords);
   }
   
-  // Save to session storage and fetch elevation
-  sessionStorage.setItem('homeLocation', JSON.stringify(coords));
+  // Save to cookie and fetch elevation
+  saveSetting('homeLocation', coords);
   fetchElevation(coords.lat, coords.lon);
 }
 
@@ -273,7 +318,7 @@ function updateAglHeight(height: number) {
 watch(homeCoordinates, async (newCoords) => {
   if (!newCoords) return;
   
-  sessionStorage.setItem('homeLocation', JSON.stringify(newCoords));
+  saveSetting('homeLocation', newCoords);
   elevation.value = null;
   
   await fetchElevation(newCoords.lat, newCoords.lon);
@@ -282,22 +327,85 @@ watch(homeCoordinates, async (newCoords) => {
     homeLocationFeature.updateHorizon(elevation.value + aglHeight.value);
   }
   
-  updateSatelliteDistances(satellites.value);
+  // Update satellite distances and show nearest satellites if none selected
+  if (satellites.value.length > 0) {
+    updateSatelliteDistances(satellites.value);
+    
+    if (!selectedSatellite.value) {
+      if (!nearestSatellitesFeature.value) {
+        nearestSatellitesFeature.value = new NearestSatellitesFeature(mapLayers.vectorSource);
+      }
+      
+      const nearestSats = satellites.value
+        .filter(sat => sat.distance !== undefined)
+        .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity))
+        .slice(0, 5);
+
+      nearestSatellitesFeature.value.updateSatellites(nearestSats);
+      nearestSatellitesFeature.value.startTracking();
+
+      // Calculate the extent to include home and all nearest satellites
+      if (mapInstance.value && nearestSats.length > 0) {
+        const homePoint = fromLonLat([newCoords.lon, newCoords.lat]);
+        let minX = homePoint[0];
+        let minY = homePoint[1];
+        let maxX = homePoint[0];
+        let maxY = homePoint[1];
+
+        // Include all nearest satellites in the extent
+        nearestSats.forEach(sat => {
+          if (sat.position) {
+            const satPoint = fromLonLat([sat.position.lng, sat.position.lat]);
+            minX = Math.min(minX, satPoint[0]);
+            minY = Math.min(minY, satPoint[1]);
+            maxX = Math.max(maxX, satPoint[0]);
+            maxY = Math.max(maxY, satPoint[1]);
+          }
+        });
+
+        // Add padding to the extent
+        const width = maxX - minX;
+        const height = maxY - minY;
+        const padding = [width * 0.2, height * 0.2];
+        const extent = [
+          minX - padding[0],
+          minY - padding[1],
+          maxX + padding[0],
+          maxY + padding[1]
+        ];
+
+        // Fit the view to include all points
+        mapInstance.value.getView().fit(extent, {
+          duration: 1000,
+          padding: [50, 50, 50, 50]
+        });
+      }
+    }
+  }
 }, { deep: true });
 
 // Watch for changes in selectedSatellite
 watch(selectedSatellite, (newSatellite) => {
+  // Save selection state (including empty string for no selection)
+  saveSetting('selectedSatellite', newSatellite);
+
+  // First, clean up the old satellite and its features
+  if (currentSatelliteFeature.value) {
+    currentSatelliteFeature.value.stopTracking();
+    currentSatelliteFeature.value.remove();
+    currentSatelliteFeature.value = null;
+  }
+
+  // Stop tracking nearest satellites if we're selecting a specific satellite
+  if (nearestSatellitesFeature.value && newSatellite) {
+    nearestSatellitesFeature.value.stopTracking();
+  }
+
   if (newSatellite) {
-    sessionStorage.setItem('selectedSatellite', newSatellite);
     const satellite = satellites.value.find(sat => sat.name === newSatellite);
     
     if (satellite) {
-      // Stop tracking and remove old satellite features
-      if (currentSatelliteFeature.value) {
-        currentSatelliteFeature.value.stopTracking();
-        currentSatelliteFeature.value.remove();
-      }
-      
+      // Create new satellite feature only after old one is completely removed
       currentSatelliteFeature.value = new SatelliteFeature(
         satellite.name,
         satellite.tle,
@@ -316,12 +424,11 @@ watch(selectedSatellite, (newSatellite) => {
         );
         satelliteInfo.value = satInfo;
 
-        // Get current satellite position
+        // Get current satellite position and fit view
         const satPosition = currentSatelliteFeature.value.getCurrentPosition();
         const homePoint = fromLonLat([homeCoordinates.value.lon, homeCoordinates.value.lat]);
         const satPoint = fromLonLat([satPosition.lng, satPosition.lat]);
 
-        // Create a view extent that includes both points with padding
         if (mapInstance.value) {
           const view = mapInstance.value.getView();
           const minX = Math.min(homePoint[0], satPoint[0]);
@@ -329,11 +436,9 @@ watch(selectedSatellite, (newSatellite) => {
           const maxX = Math.max(homePoint[0], satPoint[0]);
           const maxY = Math.max(homePoint[1], satPoint[1]);
           
-          // Add 20% padding around the extent
           const padding = [(maxX - minX) * 0.2, (maxY - minY) * 0.2];
           const extent = [minX - padding[0], minY - padding[1], maxX + padding[0], maxY + padding[1]];
           
-          // Animate view to fit the extent
           view.fit(extent, {
             duration: 1000,
             padding: [50, 50, 50, 50]
@@ -351,19 +456,68 @@ watch(selectedSatellite, (newSatellite) => {
         }
       }, 1000);
       
-      // Store the interval for cleanup
       currentSatelliteFeature.value.setUpdateInterval(updateInterval);
     }
-  } else if (currentSatelliteFeature.value) {
-    currentSatelliteFeature.value.stopTracking();
-    currentSatelliteFeature.value = null;
+  } else {
     satelliteInfo.value = null;
+    // When no satellite is selected, show the 5 nearest satellites
+    if (homeCoordinates.value && satellites.value.length > 0) {
+      if (!nearestSatellitesFeature.value) {
+        nearestSatellitesFeature.value = new NearestSatellitesFeature(mapLayers.vectorSource);
+      }
+      
+      // Get and sort satellites by distance
+      const nearestSats = satellites.value
+        .filter(sat => sat.distance !== undefined)
+        .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity))
+        .slice(0, 5);
+
+      nearestSatellitesFeature.value.updateSatellites(nearestSats);
+      nearestSatellitesFeature.value.startTracking();
+
+      // Calculate the extent to include home and all nearest satellites
+      if (mapInstance.value && nearestSats.length > 0) {
+        const homePoint = fromLonLat([homeCoordinates.value.lon, homeCoordinates.value.lat]);
+        let minX = homePoint[0];
+        let minY = homePoint[1];
+        let maxX = homePoint[0];
+        let maxY = homePoint[1];
+
+        // Include all nearest satellites in the extent
+        nearestSats.forEach(sat => {
+          if (sat.position) {
+            const satPoint = fromLonLat([sat.position.lng, sat.position.lat]);
+            minX = Math.min(minX, satPoint[0]);
+            minY = Math.min(minY, satPoint[1]);
+            maxX = Math.max(maxX, satPoint[0]);
+            maxY = Math.max(maxY, satPoint[1]);
+          }
+        });
+
+        // Add padding to the extent
+        const width = maxX - minX;
+        const height = maxY - minY;
+        const padding = [width * 0.2, height * 0.2];
+        const extent = [
+          minX - padding[0],
+          minY - padding[1],
+          maxX + padding[0],
+          maxY + padding[1]
+        ];
+
+        // Fit the view to include all points
+        mapInstance.value.getView().fit(extent, {
+          duration: 1000,
+          padding: [50, 50, 50, 50]
+        });
+      }
+    }
   }
 });
 
 // Watch for changes in showPath
 watch(showPath, (newValue) => {
-  sessionStorage.setItem('showPath', newValue.toString());
+  saveSetting('showPath', newValue);
   if (currentSatelliteFeature.value) {
     currentSatelliteFeature.value.setShowPath(newValue);
   }
@@ -371,10 +525,8 @@ watch(showPath, (newValue) => {
 
 // Initialize map on component mount
 onMounted(() => {
-  const savedPathState = sessionStorage.getItem('showPath');
-  if (savedPathState !== null) {
-    showPath.value = savedPathState === 'true';
-  }
+  showPath.value = loadSetting('showPath', false);
+  selectedSatellite.value = loadSetting('selectedSatellite', '');
   
   mapLayers = createMapLayers();
   mapInstance.value = initializeMap('map', mapLayers);
@@ -397,18 +549,17 @@ onMounted(() => {
   });
   
   // First try to load saved location
-  const savedLocation = sessionStorage.getItem('homeLocation');
+  const savedLocation = loadSetting<HomeLocationCoordinates | null>('homeLocation', null);
   if (savedLocation) {
     try {
-      const coords = JSON.parse(savedLocation);
-      homeCoordinates.value = coords;
-      homeLocationFeature.setLocation(coords);
-      fetchElevation(coords.lat, coords.lon);
+      homeCoordinates.value = savedLocation;
+      homeLocationFeature.setLocation(savedLocation);
+      fetchElevation(savedLocation.lat, savedLocation.lon);
       
-      // Center the map on the saved location and set zoom based on horizon distance
-      const point = fromLonLat([coords.lon, coords.lat]);
+      // Center the map on the saved location
+      const point = fromLonLat([savedLocation.lon, savedLocation.lat]);
       mapInstance.value.getView().setCenter(point);
-      mapInstance.value.getView().setZoom(9); // Set fixed zoom level for regional view
+      mapInstance.value.getView().setZoom(9); // Set initial zoom, will be adjusted after satellites load
     } catch (e) {
       console.error('Failed to parse saved home location:', e);
       requestGeolocation();
@@ -426,6 +577,9 @@ onMounted(() => {
 onUnmounted(() => {
   if (currentSatelliteFeature.value) {
     currentSatelliteFeature.value.stopTracking();
+  }
+  if (nearestSatellitesFeature.value) {
+    nearestSatellitesFeature.value.stopTracking();
   }
 });
 </script>
