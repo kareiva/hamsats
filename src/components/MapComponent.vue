@@ -112,12 +112,6 @@ function calculateVisibleHorizon() {
     return;
   }
   
-  // Clear any existing horizon
-  if (horizonFeature.value) {
-    horizonSource.value.removeFeature(horizonFeature.value);
-    horizonFeature.value = null;
-  }
-  
   // Get the observer height (elevation + 1.7m for average human height + AGL height)
   const observerHeight = elevation.value + 1.7 + Number(aglHeight.value);
   
@@ -136,6 +130,12 @@ function calculateVisibleHorizon() {
   console.log('Home point in map coordinates:', homePoint);
   
   try {
+    // Clear any existing horizon first to avoid stacking
+    if (horizonFeature.value) {
+      horizonSource.value.removeFeature(horizonFeature.value);
+      horizonFeature.value = null;
+    }
+    
     // Create a circle geometry directly instead of using circular polygon
     const circleGeometry = new Circle(homePoint, horizonDistanceM);
     
@@ -158,15 +158,10 @@ function calculateVisibleHorizon() {
       })
     );
     
-    // Add the feature to the horizon source
+    // Add the feature to the horizon source immediately
     horizonSource.value.addFeature(horizonFeature.value);
     
-    // Force clear the source and re-add the feature to ensure it's rendered
-    const tempFeature = horizonFeature.value;
-    horizonSource.value.clear();
-    horizonSource.value.addFeature(tempFeature);
-    
-    // Ensure the map is rendered to show the new feature
+    // Force immediate rendering
     mapInstance.value.render();
     
     // Calculate appropriate zoom level based on horizon distance
@@ -333,11 +328,13 @@ onMounted(() => {
   vectorSource.value = new VectorSource();
   const vectorLayer = new VectorLayer({
     source: vectorSource.value,
-    zIndex: 10 // Make sure it's above the base map
+    zIndex: 10 // Make sure it's above the base map and horizon
   });
   
   // Create vector source and layer for the horizon
-  horizonSource.value = new VectorSource();
+  horizonSource.value = new VectorSource({
+    wrapX: false // Prevent wrapping around the date line
+  });
   const horizonLayer = new VectorLayer({
     source: horizonSource.value,
     zIndex: 5, // Below the marker but above the base map
@@ -349,7 +346,9 @@ onMounted(() => {
         color: 'rgba(0, 70, 255, 0.33)' // Blue fill with 33% opacity
       })
     }),
-    className: 'horizon-layer' // Add class for CSS targeting
+    className: 'horizon-layer', // Add class for CSS targeting
+    updateWhileAnimating: true, // Update during animations
+    updateWhileInteracting: true // Update during interactions
   });
   
   // Create the map with proper view settings
@@ -359,8 +358,8 @@ onMounted(() => {
       new TileLayer({
         source: new OSM()
       }),
-      horizonLayer, // Make sure horizon layer is added before marker layer
-      vectorLayer
+      horizonLayer, // Add horizon layer first (lower z-index)
+      vectorLayer    // Add vector layer second (higher z-index)
     ],
     view: new View({
       center: [0, 0],
@@ -370,9 +369,13 @@ onMounted(() => {
     controls: defaultControls()
   });
   
-  // Add translate interaction to make the marker draggable
+  // Add translate interaction to make ONLY the marker draggable
   const translate = new Translate({
-    features: vectorSource.value.getFeaturesCollection()
+    features: vectorSource.value.getFeaturesCollection(),
+    filter: (feature) => {
+      // Only allow dragging the home location marker, not the horizon circle
+      return feature === homeFeature.value;
+    }
   });
   
   mapInstance.value.addInteraction(translate);
@@ -387,6 +390,7 @@ onMounted(() => {
         const lonLat = toLonLat(coordinates);
         homeCoordinates.value = { lon: lonLat[0], lat: lonLat[1] };
         console.log('Home location moved to:', lonLat);
+        // The horizon will be recalculated automatically via the watcher
       }
     }
   });
