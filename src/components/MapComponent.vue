@@ -41,10 +41,10 @@
     </div>
     <div class="status-bar">
       <div v-if="homeCoordinates">
-        Home Location: {{ homeCoordinates.lat.toFixed(6) }}° N, {{ homeCoordinates.lon.toFixed(6) }}° E
-        <span v-if="elevation !== null"> | Elevation ASL: {{ elevation.toFixed(1) }} m | Elevation AGL: {{ aglHeight }} m</span>
-        <span v-if="selectedSatellite && satelliteInfo"> | Distance: {{ satelliteInfo.distance.toFixed(1) }} km | Elevation Angle: {{ satelliteInfo.elevationAngle.toFixed(1) }}° | Azimuth: {{ satelliteInfo.azimuth.toFixed(1) }}°</span>
-        <span v-else> | Fetching elevation...</span>
+        Home: {{ homeCoordinates.lat.toFixed(6) }}° N, {{ homeCoordinates.lon.toFixed(6) }}° E
+        <span v-if="elevation !== null"> | ASL: {{ elevation.toFixed(1) }} m | AGL: {{ aglHeight }} m</span>
+        <span v-if="selectedSatellite && satelliteInfo"> | Sat: {{ satelliteInfo.distance.toFixed(1) }} km away | Azimuth: {{ satelliteInfo.azimuth.toFixed(1) }}° | Elevation: {{ satelliteInfo.elevationAngle.toFixed(1) }}° </span>
+        <span v-else> | Select a satellite...</span>
       </div>
       <div v-else>No home location set</div>
     </div>
