@@ -355,7 +355,7 @@ export class SatelliteFeature {
     }
   }
 
-  private remove() {
+  public remove() {
     // Remove all features from their respective sources
     if (this.satelliteFeature) {
       this.vectorSource.removeFeature(this.satelliteFeature);

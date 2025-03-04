@@ -280,8 +280,10 @@ watch(selectedSatellite, (newSatellite) => {
     const satellite = satellites.value.find(sat => sat.name === newSatellite);
     
     if (satellite) {
+      // Stop tracking and remove old satellite features
       if (currentSatelliteFeature.value) {
         currentSatelliteFeature.value.stopTracking();
+        currentSatelliteFeature.value.remove(); // Ensure complete removal of old features
       }
       
       currentSatelliteFeature.value = new SatelliteFeature(
