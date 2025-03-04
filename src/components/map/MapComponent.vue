@@ -62,7 +62,8 @@ function loadSetting<T>(key: string, defaultValue: T): T {
 
 // Add this near the top of the script section, with other cookie utilities
 const SATELLITE_DATA_COOKIE = SETTINGS_PREFIX + 'amateur_txt';
-const SATELLITE_DATA_EXPIRY = 1; // 24 hours
+const SATELLITE_DATA_TIMESTAMP_COOKIE = SETTINGS_PREFIX + 'amateur_txt_timestamp';
+const SATELLITE_DATA_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 // State
 const mapInstance = ref<Map | null>(null);
@@ -86,25 +87,27 @@ async function loadSatellites() {
 
   // Try to load from cookie first
   const cachedData = Cookies.get(SATELLITE_DATA_COOKIE);
-  if (cachedData) {
+  const cachedTimestamp = loadSetting<number>(SATELLITE_DATA_TIMESTAMP_COOKIE, 0);
+  const now = Date.now();
+
+  if (cachedData && cachedTimestamp && (now - cachedTimestamp < SATELLITE_DATA_EXPIRY)) {
     try {
       satelliteData = JSON.parse(cachedData);
-      console.log('Using cached satellite data');
+      console.log('Using cached satellite data (age: ' + ((now - cachedTimestamp) / 3600000).toFixed(1) + ' hours)');
     } catch (e) {
       console.warn('Failed to parse cached satellite data:', e);
     }
   }
 
-  // If no cached data, try to fetch from server
+  // If no valid cached data, try to fetch from server
   if (!satelliteData) {
     try {
       const response = await fetch('https://celestrak.org/NORAD/elements/amateur.txt');
       if (response.ok) {
         satelliteData = await response.text();
-        // Cache the new data
-        Cookies.set(SATELLITE_DATA_COOKIE, JSON.stringify(satelliteData), { 
-          expires: SATELLITE_DATA_EXPIRY 
-        });
+        // Cache the new data with timestamp
+        Cookies.set(SATELLITE_DATA_COOKIE, JSON.stringify(satelliteData));
+        saveSetting(SATELLITE_DATA_TIMESTAMP_COOKIE, now);
         console.log('Fetched and cached new satellite data');
       } else if (response.status === 403) {
         console.warn('Access forbidden to Celestrak API');
