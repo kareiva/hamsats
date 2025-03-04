@@ -700,6 +700,37 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     gap: 5px;
+    max-width: calc(100% - 20px);
+  }
+}
+
+@media (max-width: 640px) {
+  .custom-controls {
+    &.top-right {
+      width: calc(100% - 20px);
+    }
+  }
+
+  .ol-zoom {
+    left: 10px !important;
+    bottom: 60px !important;
+  }
+
+  .ol-rotate {
+    right: 10px !important;
+    bottom: 60px !important;
+  }
+
+  .ol-attribution {
+    bottom: 10px !important;
+    left: 0 !important;
+    right: 0 !important;
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.7) !important;
+    
+    &.ol-uncollapsible {
+      right: 0 !important;
+    }
   }
 }
 
