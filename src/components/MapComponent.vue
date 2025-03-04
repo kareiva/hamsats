@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch, onUnmounted } from 'vue';
 import Map from 'ol/Map';
 import View from 'ol/View';
 import TileLayer from 'ol/layer/Tile';
@@ -62,6 +62,8 @@ import { Style, Icon, Fill, Stroke } from 'ol/style';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import Translate from 'ol/interaction/Translate';
 import { circular as createCircularPolygon } from 'ol/geom/Polygon';
+import { getLatLngObj } from 'tle.js';
+import satelliteIcon from '@/assets/satellite.svg';
 
 const mapInstance = ref<Map | null>(null);
 const homeFeature = ref<Feature | null>(null);
@@ -73,12 +75,17 @@ const horizonFeature = ref<Feature | null>(null);
 const aglHeight = ref<number>(0); // Default AGL height is 0 meters
 const selectedSatellite = ref<string>(''); // Selected satellite
 const satellites = ref<{ name: string; tle: string[] }[]>([]);
+const satelliteFeature = ref<Feature | null>(null);
+const positionUpdateInterval = ref<number | null>(null);
 
 // Watch for changes in selectedSatellite to save to session storage
 watch(selectedSatellite, (newSatellite) => {
   if (newSatellite) {
     sessionStorage.setItem('selectedSatellite', newSatellite);
     console.log(`Saved selected satellite to session: ${newSatellite}`);
+    startSatelliteTracking(newSatellite);
+  } else {
+    stopSatelliteTracking();
   }
 });
 
@@ -461,6 +468,75 @@ function setHomeLocation() {
   homeCoordinates.value = { lon: lonLat[0], lat: lonLat[1] };
   console.log('Home location set at:', lonLat);
 }
+
+function startSatelliteTracking(satelliteName: string) {
+  // Stop any existing tracking
+  stopSatelliteTracking();
+
+  // Find the satellite's TLE data
+  const satellite = satellites.value.find(sat => sat.name === satelliteName);
+  if (!satellite || !vectorSource.value) return;
+
+  // Create a new feature for the satellite
+  satelliteFeature.value = new Feature();
+  satelliteFeature.value.setStyle(
+    new Style({
+      image: new Icon({
+        src: satelliteIcon,
+        scale: 1.5,
+        anchor: [0.5, 0.5],
+        rotation: Math.PI / 4 // 45-degree rotation for better appearance
+      })
+    })
+  );
+
+  // Add the feature to the vector source
+  vectorSource.value.addFeature(satelliteFeature.value);
+
+  // Update position immediately and then every second
+  updateSatellitePosition(satellite.tle);
+  positionUpdateInterval.value = window.setInterval(() => {
+    updateSatellitePosition(satellite.tle);
+  }, 1000);
+}
+
+function updateSatellitePosition(tle: string[]) {
+  if (!satelliteFeature.value) return;
+
+  try {
+    // Get current position
+    const position = getLatLngObj(tle);
+    
+    // Convert to map coordinates
+    const point = fromLonLat([position.lng, position.lat]);
+    
+    // Update the feature's geometry
+    satelliteFeature.value.setGeometry(new Point(point));
+    
+    console.log(`Satellite position updated: ${position.lat}, ${position.lng}`);
+  } catch (error) {
+    console.error('Error updating satellite position:', error);
+  }
+}
+
+function stopSatelliteTracking() {
+  // Clear the update interval
+  if (positionUpdateInterval.value) {
+    clearInterval(positionUpdateInterval.value);
+    positionUpdateInterval.value = null;
+  }
+
+  // Remove the satellite feature from the map
+  if (satelliteFeature.value && vectorSource.value) {
+    vectorSource.value.removeFeature(satelliteFeature.value);
+    satelliteFeature.value = null;
+  }
+}
+
+// Clean up on component unmount
+onUnmounted(() => {
+  stopSatelliteTracking();
+});
 
 onMounted(() => {
   // Load satellites from file
