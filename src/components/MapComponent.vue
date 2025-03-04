@@ -62,8 +62,9 @@ import { Style, Icon, Fill, Stroke } from 'ol/style';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import Translate from 'ol/interaction/Translate';
 import { circular as createCircularPolygon } from 'ol/geom/Polygon';
-import { getLatLngObj } from 'tle.js';
+import { getLatLngObj, getSatelliteInfo } from 'tle.js';
 import satelliteIcon from '@/assets/satellite.svg';
+import LineString from 'ol/geom/LineString';
 
 const mapInstance = ref<Map | null>(null);
 const homeFeature = ref<Feature | null>(null);
@@ -77,6 +78,8 @@ const selectedSatellite = ref<string>(''); // Selected satellite
 const satellites = ref<{ name: string; tle: string[] }[]>([]);
 const satelliteFeature = ref<Feature | null>(null);
 const positionUpdateInterval = ref<number | null>(null);
+const lineOfSightFeature = ref<Feature | null>(null);
+const lineSource = ref<VectorSource | null>(null);
 
 // Watch for changes in selectedSatellite to save to session storage
 watch(selectedSatellite, (newSatellite) => {
@@ -469,13 +472,114 @@ function setHomeLocation() {
   console.log('Home location set at:', lonLat);
 }
 
+function isSatelliteVisible(observerLat: number, observerLon: number, observerAlt: number, 
+                          satLat: number, satLon: number, satAlt: number): boolean {
+  // Earth radius in kilometers
+  const R = 6371;
+  
+  // Convert all angles to radians
+  const lat1 = observerLat * Math.PI / 180;
+  const lon1 = observerLon * Math.PI / 180;
+  const lat2 = satLat * Math.PI / 180;
+  const lon2 = satLon * Math.PI / 180;
+  
+  // Calculate great circle distance
+  const dLon = lon2 - lon1;
+  const dLat = lat2 - lat1;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1) * Math.cos(lat2) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const distance = R * c;
+  
+  // Convert altitudes to kilometers
+  const h1 = observerAlt / 1000;
+  const h2 = satAlt;
+  
+  // Calculate the angle between the horizon and the satellite
+  const alpha = Math.acos((R + h1) / (R + h2));
+  const beta = Math.acos(R / (R + h1));
+  
+  // Calculate the central angle between observer and satellite
+  const centralAngle = distance / R;
+  
+  // The satellite is visible if the central angle is less than alpha + beta
+  return centralAngle < (alpha + beta);
+}
+
+function createCurvedLine(start: number[], end: number[], numPoints: number = 50): number[][] {
+  const points: number[][] = [];
+  
+  for (let i = 0; i <= numPoints; i++) {
+    const t = i / numPoints;
+    // Use spherical interpolation
+    const lat = start[1] + t * (end[1] - start[1]);
+    const lon = start[0] + t * (end[0] - start[0]);
+    points.push(fromLonLat([lon, lat]));
+  }
+  
+  return points;
+}
+
+function updateSatellitePosition(tle: string[]) {
+  if (!satelliteFeature.value || !homeCoordinates.value) return;
+
+  try {
+    // Get current position and velocity
+    const satInfo = getSatelliteInfo(tle);
+    const position = getLatLngObj(tle);
+    
+    // Convert to map coordinates for satellite
+    const satPoint = fromLonLat([position.lng, position.lat]);
+    
+    // Update the satellite feature's geometry
+    satelliteFeature.value.setGeometry(new Point(satPoint));
+    
+    // Update line of sight if we have home coordinates
+    if (homeCoordinates.value && lineOfSightFeature.value && elevation.value !== null) {
+      const observerAlt = elevation.value + Number(aglHeight.value);
+      const isVisible = isSatelliteVisible(
+        homeCoordinates.value.lat,
+        homeCoordinates.value.lon,
+        observerAlt,
+        position.lat,
+        position.lng,
+        satInfo.height
+      );
+      
+      // Create curved line points
+      const homePoint = fromLonLat([homeCoordinates.value.lon, homeCoordinates.value.lat]);
+      const curvedPoints = createCurvedLine(
+        [homeCoordinates.value.lon, homeCoordinates.value.lat],
+        [position.lng, position.lat]
+      );
+      
+      // Update line geometry and style
+      lineOfSightFeature.value.setGeometry(new LineString(curvedPoints));
+      lineOfSightFeature.value.setStyle(
+        new Style({
+          stroke: new Stroke({
+            color: isVisible ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)',
+            width: 2,
+            lineDash: isVisible ? undefined : [5, 5]
+          })
+        })
+      );
+    }
+    
+    console.log(`Satellite position updated: ${position.lat}, ${position.lng}`);
+  } catch (error) {
+    console.error('Error updating satellite position:', error);
+  }
+}
+
 function startSatelliteTracking(satelliteName: string) {
   // Stop any existing tracking
   stopSatelliteTracking();
 
   // Find the satellite's TLE data
   const satellite = satellites.value.find(sat => sat.name === satelliteName);
-  if (!satellite || !vectorSource.value) return;
+  if (!satellite || !vectorSource.value || !lineSource.value) return;
 
   // Create a new feature for the satellite
   satelliteFeature.value = new Feature();
@@ -485,13 +589,17 @@ function startSatelliteTracking(satelliteName: string) {
         src: satelliteIcon,
         scale: 1.5,
         anchor: [0.5, 0.5],
-        rotation: Math.PI / 4 // 45-degree rotation for better appearance
+        rotation: Math.PI / 4
       })
     })
   );
 
-  // Add the feature to the vector source
+  // Create line of sight feature
+  lineOfSightFeature.value = new Feature();
+  
+  // Add features to sources
   vectorSource.value.addFeature(satelliteFeature.value);
+  lineSource.value.addFeature(lineOfSightFeature.value);
 
   // Update position immediately and then every second
   updateSatellitePosition(satellite.tle);
@@ -500,36 +608,20 @@ function startSatelliteTracking(satelliteName: string) {
   }, 1000);
 }
 
-function updateSatellitePosition(tle: string[]) {
-  if (!satelliteFeature.value) return;
-
-  try {
-    // Get current position
-    const position = getLatLngObj(tle);
-    
-    // Convert to map coordinates
-    const point = fromLonLat([position.lng, position.lat]);
-    
-    // Update the feature's geometry
-    satelliteFeature.value.setGeometry(new Point(point));
-    
-    console.log(`Satellite position updated: ${position.lat}, ${position.lng}`);
-  } catch (error) {
-    console.error('Error updating satellite position:', error);
-  }
-}
-
 function stopSatelliteTracking() {
-  // Clear the update interval
   if (positionUpdateInterval.value) {
     clearInterval(positionUpdateInterval.value);
     positionUpdateInterval.value = null;
   }
 
-  // Remove the satellite feature from the map
   if (satelliteFeature.value && vectorSource.value) {
     vectorSource.value.removeFeature(satelliteFeature.value);
     satelliteFeature.value = null;
+  }
+
+  if (lineOfSightFeature.value && lineSource.value) {
+    lineSource.value.removeFeature(lineOfSightFeature.value);
+    lineOfSightFeature.value = null;
   }
 }
 
@@ -569,6 +661,13 @@ onMounted(() => {
     updateWhileInteracting: true // Update during interactions
   });
   
+  // Create line source and layer for the line of sight
+  lineSource.value = new VectorSource();
+  const lineLayer = new VectorLayer({
+    source: lineSource.value,
+    zIndex: 8 // Between horizon and markers
+  });
+  
   // Create the map with proper view settings
   mapInstance.value = new Map({
     target: 'map',
@@ -576,8 +675,9 @@ onMounted(() => {
       new TileLayer({
         source: new OSM()
       }),
-      horizonLayer, // Add horizon layer first (lower z-index)
-      vectorLayer    // Add vector layer second (higher z-index)
+      horizonLayer,
+      lineLayer,    // Add line layer
+      vectorLayer
     ],
     view: new View({
       center: [0, 0],
