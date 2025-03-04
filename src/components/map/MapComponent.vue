@@ -60,6 +60,10 @@ function loadSetting<T>(key: string, defaultValue: T): T {
   }
 }
 
+// Add this near the top of the script section, with other cookie utilities
+const SATELLITE_DATA_COOKIE = SETTINGS_PREFIX + 'amateur_txt';
+const SATELLITE_DATA_EXPIRY = 1; // 24 hours
+
 // State
 const mapInstance = ref<Map | null>(null);
 const homeCoordinates = ref<HomeLocationCoordinates | null>(null);
@@ -78,14 +82,61 @@ let mapLayers: ReturnType<typeof createMapLayers>;
 
 // Load satellites from file
 async function loadSatellites() {
-  try {
-    const response = await fetch('https://celestrak.org/NORAD/elements/amateur.txt');
-    if (!response.ok) {
-      throw new Error(`Failed to load satellites: ${response.status} ${response.statusText}`);
+  let satelliteData: string | null = null;
+
+  // Try to load from cookie first
+  const cachedData = Cookies.get(SATELLITE_DATA_COOKIE);
+  if (cachedData) {
+    try {
+      satelliteData = JSON.parse(cachedData);
+      console.log('Using cached satellite data');
+    } catch (e) {
+      console.warn('Failed to parse cached satellite data:', e);
     }
-    
-    const text = await response.text();
-    const lines = text.split('\n');
+  }
+
+  // If no cached data, try to fetch from server
+  if (!satelliteData) {
+    try {
+      const response = await fetch('https://celestrak.org/NORAD/elements/amateur.txt');
+      if (response.ok) {
+        satelliteData = await response.text();
+        // Cache the new data
+        Cookies.set(SATELLITE_DATA_COOKIE, JSON.stringify(satelliteData), { 
+          expires: SATELLITE_DATA_EXPIRY 
+        });
+        console.log('Fetched and cached new satellite data');
+      } else if (response.status === 403) {
+        console.warn('Access forbidden to Celestrak API');
+      } else {
+        console.warn(`Failed to fetch satellite data: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.warn('Error fetching satellite data:', error);
+    }
+  }
+
+  // If both cache and fetch failed, use local file
+  if (!satelliteData) {
+    try {
+      const response = await fetch('/amateur.txt');
+      if (response.ok) {
+        satelliteData = await response.text();
+        console.log('Using local amateur.txt file');
+      } else {
+        throw new Error(`Failed to load local file: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Failed to load satellite data from all sources:', error);
+      satellites.value = [];
+      selectedSatellite.value = '';
+      return;
+    }
+  }
+
+  // Parse the satellite data
+  try {
+    const lines = satelliteData.split('\n');
     const satelliteList: { name: string; tle: [string, string]; position?: { lat: number; lng: number; height: number }; distance?: number }[] = [];
     
     for (let i = 0; i < lines.length; i += 3) {
@@ -119,7 +170,7 @@ async function loadSatellites() {
     }
     
     satellites.value = satelliteList;
-    console.log(`Loaded ${satelliteList.length} satellites from file`);
+    console.log(`Loaded ${satelliteList.length} satellites`);
     
     // Load saved satellite selection after satellites are loaded
     const savedSatellite = loadSetting<string>('selectedSatellite', '');
@@ -236,7 +287,7 @@ async function loadSatellites() {
       }
     }
   } catch (error) {
-    console.error('Error loading satellites:', error);
+    console.error('Error parsing satellite data:', error);
     satellites.value = [];
     selectedSatellite.value = '';
   }
