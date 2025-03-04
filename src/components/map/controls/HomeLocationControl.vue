@@ -1,7 +1,9 @@
 <template>
   <div class="home-location-control">
     <div class="control-header">
-      <button @click="$emit('set-home')" class="home-button">Set Home Location</button>
+      <button @click="$emit('toggle-home')" class="home-button" :class="{ 'clear': homeCoordinates }">
+        {{ homeCoordinates ? 'Clear Home Location' : 'Set Home Location' }}
+      </button>
       <button v-if="homeCoordinates" @click="showSlider = !showSlider" class="toggle-button">
         {{ showSlider ? '−' : '+' }} AGL: {{ aglHeight }}m
       </button>
@@ -37,7 +39,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'set-home'): void;
+  (e: 'toggle-home'): void;
   (e: 'update:aglHeight', value: number): void;
 }>();
 
@@ -79,6 +81,14 @@ watch(() => props.aglHeight, (newValue) => {
       
       &:hover {
         background-color: rgba(0, 60, 136, 0.9);
+      }
+      
+      &.clear {
+        background-color: rgba(136, 0, 0, 0.7);
+        
+        &:hover {
+          background-color: rgba(136, 0, 0, 0.9);
+        }
       }
       
       &.toggle-button {
