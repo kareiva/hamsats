@@ -3,6 +3,7 @@
     <div id="map" class="map-container">
       <div class="custom-controls top-right">
         <button @click="setHomeLocation" class="home-button">Set Home Location</button>
+        <button @click="calculateVisibleHorizon" class="horizon-button" :disabled="!homeCoordinates">Show Visible Horizon</button>
       </div>
     </div>
     <div class="status-bar">
@@ -27,15 +28,20 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
-import { Style, Icon } from 'ol/style';
+import Polygon from 'ol/geom/Polygon';
+import Circle from 'ol/geom/Circle';
+import { Style, Icon, Fill, Stroke } from 'ol/style';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import Translate from 'ol/interaction/Translate';
+import { circular as createCircularPolygon } from 'ol/geom/Polygon';
 
 const mapInstance = ref<Map | null>(null);
 const homeFeature = ref<Feature | null>(null);
 const vectorSource = ref<VectorSource | null>(null);
+const horizonSource = ref<VectorSource | null>(null);
 const homeCoordinates = ref<{ lat: number; lon: number } | null>(null);
 const elevation = ref<number | null>(null);
+const horizonFeature = ref<Feature | null>(null);
 
 // Watch for changes in home coordinates to fetch elevation
 watch(homeCoordinates, async (newCoords) => {
@@ -46,6 +52,12 @@ watch(homeCoordinates, async (newCoords) => {
     // Reset elevation while fetching
     elevation.value = null;
     
+    // Clear any existing horizon
+    if (horizonSource.value && horizonFeature.value) {
+      horizonSource.value.removeFeature(horizonFeature.value);
+      horizonFeature.value = null;
+    }
+    
     // Fetch elevation data
     try {
       await fetchElevation(newCoords.lat, newCoords.lon);
@@ -54,6 +66,100 @@ watch(homeCoordinates, async (newCoords) => {
     }
   }
 }, { deep: true });
+
+// Calculate the distance to the horizon based on observer height
+function calculateHorizonDistance(observerHeight: number): number {
+  // Formula: distance (km) = 3.57 * sqrt(height in meters)
+  // This is a simplified formula for Earth's curvature
+  return 3.57 * Math.sqrt(observerHeight);
+}
+
+// Calculate and draw the visible horizon
+function calculateVisibleHorizon() {
+  if (!mapInstance.value || !homeCoordinates.value || !vectorSource.value || !horizonSource.value || elevation.value === null) {
+    console.error('Cannot calculate horizon: missing required data');
+    return;
+  }
+  
+  // Clear any existing horizon
+  if (horizonFeature.value) {
+    horizonSource.value.removeFeature(horizonFeature.value);
+    horizonFeature.value = null;
+  }
+  
+  // Get the observer height (elevation + 1.7m for average human height)
+  const observerHeight = elevation.value + 1.7;
+  
+  // Calculate the horizon distance in kilometers
+  const horizonDistanceKm = calculateHorizonDistance(observerHeight);
+  
+  // Convert to meters for OpenLayers
+  const horizonDistanceM = horizonDistanceKm * 1000;
+  
+  console.log(`Calculated horizon distance: ${horizonDistanceKm.toFixed(2)} km based on observer height of ${observerHeight.toFixed(1)} m`);
+  
+  // Get the home location in map coordinates
+  const homePoint = fromLonLat([homeCoordinates.value.lon, homeCoordinates.value.lat]);
+  
+  // Log the home point to verify it's correct
+  console.log('Home point in map coordinates:', homePoint);
+  
+  try {
+    // Create a circle geometry directly instead of using circular polygon
+    const circleGeometry = new Circle(homePoint, horizonDistanceM);
+    
+    // Create a feature with the circle geometry
+    horizonFeature.value = new Feature({
+      geometry: circleGeometry
+    });
+    
+    // Style the horizon with blue colors
+    horizonFeature.value.setStyle(
+      new Style({
+        fill: new Fill({
+          color: 'rgba(0, 70, 255, 0.33)' // Blue fill with 33% opacity
+        }),
+        zIndex: 100 // Ensure high z-index
+      })
+    );
+    
+    // Add the feature to the horizon source
+    horizonSource.value.addFeature(horizonFeature.value);
+    
+    // Force clear the source and re-add the feature to ensure it's rendered
+    const tempFeature = horizonFeature.value;
+    horizonSource.value.clear();
+    horizonSource.value.addFeature(tempFeature);
+    
+    // Ensure the map is rendered to show the new feature
+    mapInstance.value.render();
+    
+    // Calculate appropriate zoom level based on horizon distance
+    // For a circle of radius r (in km), a good zoom level is approximately 14 - log2(r)
+    const zoomLevel = Math.max(2, Math.min(19, Math.floor(14 - Math.log2(horizonDistanceKm))));
+    console.log('Setting zoom level to:', zoomLevel);
+    
+    // Get the current view
+    const view = mapInstance.value.getView();
+    
+    // Animate the view to smoothly transition to the horizon circle
+    view.animate({
+      center: homePoint,
+      zoom: zoomLevel,
+      duration: 1500, // 1.5 seconds for smooth transition
+      easing: function(t) {
+        // Use an easing function for smoother animation
+        // This is a simple ease-out function
+        return 1 - Math.pow(1 - t, 3);
+      }
+    });
+    
+    // Log success
+    console.log('Horizon feature added successfully with radius:', horizonDistanceM, 'meters, zoom:', zoomLevel);
+  } catch (error) {
+    console.error('Error creating horizon circle:', error);
+  }
+}
 
 // Fetch elevation data from Open-Elevation API
 async function fetchElevation(lat: number, lon: number) {
@@ -102,14 +208,14 @@ function loadSavedHomeLocation() {
         geometry: new Point(point)
       });
       
-      // Style the feature
+      // Style the feature with a green marker icon
       homeFeature.value.setStyle(
         new Style({
           image: new Icon({
             anchor: [0.5, 1],
             anchorXUnits: 'fraction',
             anchorYUnits: 'fraction',
-            src: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            src: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
             scale: 0.5
           })
         })
@@ -150,14 +256,14 @@ function setHomeLocation() {
     geometry: new Point(center)
   });
   
-  // Style the feature with a marker icon
+  // Style the feature with a green marker icon
   homeFeature.value.setStyle(
     new Style({
       image: new Icon({
         anchor: [0.5, 1],
         anchorXUnits: 'fraction',
         anchorYUnits: 'fraction',
-        src: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        src: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
         scale: 0.5
       })
     })
@@ -180,17 +286,35 @@ onMounted(() => {
     zIndex: 10 // Make sure it's above the base map
   });
   
+  // Create vector source and layer for the horizon
+  horizonSource.value = new VectorSource();
+  const horizonLayer = new VectorLayer({
+    source: horizonSource.value,
+    zIndex: 5, // Below the marker but above the base map
+    properties: {
+      name: 'horizonLayer' // Add a name for debugging
+    },
+    style: new Style({
+      fill: new Fill({
+        color: 'rgba(0, 70, 255, 0.33)' // Blue fill with 33% opacity
+      })
+    })
+  });
+  
+  // Create the map with proper view settings
   mapInstance.value = new Map({
     target: 'map',
     layers: [
       new TileLayer({
         source: new OSM()
       }),
+      horizonLayer, // Make sure horizon layer is added before marker layer
       vectorLayer
     ],
     view: new View({
       center: [0, 0],
-      zoom: 2
+      zoom: 2,
+      projection: 'EPSG:3857' // Explicitly set the projection to Web Mercator
     }),
     controls: defaultControls()
   });
@@ -253,9 +377,12 @@ onMounted(() => {
   &.top-right {
     top: 10px;
     right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
   }
   
-  .home-button {
+  .home-button, .horizon-button {
     background-color: rgba(0, 60, 136, 0.7);
     color: white;
     border: none;
@@ -266,6 +393,11 @@ onMounted(() => {
     
     &:hover {
       background-color: rgba(0, 60, 136, 0.9);
+    }
+    
+    &:disabled {
+      background-color: rgba(0, 60, 136, 0.3);
+      cursor: not-allowed;
     }
   }
 }
@@ -353,5 +485,17 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
+}
+
+/* Ensure vector features are visible */
+.ol-layer canvas {
+  image-rendering: auto;
+}
+
+/* Make sure the vector layers are visible */
+.ol-layer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
 }
 </style> 
