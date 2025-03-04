@@ -28,7 +28,7 @@
           <select id="satellite-select" v-model="selectedSatellite" class="satellite-dropdown">
             <option value="">-- Select a satellite --</option>
             <option v-for="sat in satellites" :key="sat.name" :value="sat.name">
-              {{ sat.name }}
+              {{ sat.name }}{{ sat.distance !== undefined ? ` (${sat.distance.toFixed(0)} km)` : '' }}
             </option>
           </select>
           <div class="path-control" v-if="selectedSatellite">
@@ -81,7 +81,7 @@ const elevation = ref<number | null>(null);
 const horizonFeature = ref<Feature | null>(null);
 const aglHeight = ref<number>(0); // Default AGL height is 0 meters
 const selectedSatellite = ref<string>(''); // Selected satellite
-const satellites = ref<{ name: string; tle: string[] }[]>([]);
+const satellites = ref<{ name: string; tle: string[]; position?: { lat: number; lng: number; height: number }; distance?: number }[]>([]);
 const satelliteFeature = ref<Feature | null>(null);
 const positionUpdateInterval = ref<number | null>(null);
 const lineOfSightFeature = ref<Feature | null>(null);
@@ -91,6 +91,7 @@ const satelliteHorizonFeature = ref<Feature | null>(null);
 const showPath = ref<boolean>(false);
 const pathFeatures = ref<Feature[]>([]);
 const pathUpdateInterval = ref<number | null>(null);
+const satelliteToPathLine = ref<Feature | null>(null);
 
 // Watch for changes in selectedSatellite to save to session storage
 watch(selectedSatellite, (newSatellite) => {
@@ -113,7 +114,7 @@ async function loadSatellites() {
     
     const text = await response.text();
     const lines = text.split('\n');
-    const satelliteList: { name: string; tle: string[] }[] = [];
+    const satelliteList: { name: string; tle: string[]; position?: { lat: number; lng: number; height: number }; distance?: number }[] = [];
     
     // Process TLE data (3 lines per satellite: name, line1, line2)
     for (let i = 0; i < lines.length; i += 3) {
@@ -124,12 +125,48 @@ async function loadSatellites() {
         
         // Validate TLE format (basic check)
         if (name && line1 && line2 && line1.startsWith('1 ') && line2.startsWith('2 ')) {
-          satelliteList.push({
-            name,
-            tle: [line1, line2]
-          });
+          try {
+            const tle = [line1, line2];
+            const position = getLatLngObj(tle);
+            const satInfo = getSatelliteInfo(tle);
+            
+            satelliteList.push({
+              name,
+              tle,
+              position: { ...position, height: satInfo.height }
+            });
+          } catch (e) {
+            console.warn(`Failed to calculate position for satellite ${name}:`, e);
+            // Still add the satellite even if position calculation fails
+            satelliteList.push({ name, tle: [line1, line2] });
+          }
         }
       }
+    }
+    
+    // If home location exists, calculate distances and sort
+    if (homeCoordinates.value) {
+      satelliteList.forEach(sat => {
+        if (sat.position) {
+          const info = calculateSatelliteInfo(
+            homeCoordinates.value!.lat,
+            homeCoordinates.value!.lon,
+            elevation.value || 0,
+            sat.position.lat,
+            sat.position.lng,
+            sat.position.height
+          );
+          sat.distance = info.distance;
+        }
+      });
+      
+      // Sort by distance if available
+      satelliteList.sort((a, b) => {
+        if (a.distance === undefined && b.distance === undefined) return 0;
+        if (a.distance === undefined) return 1;
+        if (b.distance === undefined) return -1;
+        return a.distance - b.distance;
+      });
     }
     
     satellites.value = satelliteList;
@@ -147,25 +184,59 @@ async function loadSatellites() {
         throw new Error(`Failed to load satellites from project space: ${response.status} ${response.statusText}`);
       }
       
+      // Reuse the same loading logic
       const text = await response.text();
       const lines = text.split('\n');
-      const satelliteList: { name: string; tle: string[] }[] = [];
+      const satelliteList: { name: string; tle: string[]; position?: { lat: number; lng: number; height: number }; distance?: number }[] = [];
       
-      // Process TLE data (3 lines per satellite: name, line1, line2)
       for (let i = 0; i < lines.length; i += 3) {
         if (i + 2 < lines.length) {
           const name = lines[i].trim();
           const line1 = lines[i + 1].trim();
           const line2 = lines[i + 2].trim();
           
-          // Validate TLE format (basic check)
           if (name && line1 && line2 && line1.startsWith('1 ') && line2.startsWith('2 ')) {
-            satelliteList.push({
-              name,
-              tle: [line1, line2]
-            });
+            try {
+              const tle = [line1, line2];
+              const position = getLatLngObj(tle);
+              const satInfo = getSatelliteInfo(tle);
+              
+              satelliteList.push({
+                name,
+                tle,
+                position: { ...position, height: satInfo.height }
+              });
+            } catch (e) {
+              console.warn(`Failed to calculate position for satellite ${name}:`, e);
+              satelliteList.push({ name, tle: [line1, line2] });
+            }
           }
         }
+      }
+      
+      // If home location exists, calculate distances and sort
+      if (homeCoordinates.value) {
+        satelliteList.forEach(sat => {
+          if (sat.position) {
+            const info = calculateSatelliteInfo(
+              homeCoordinates.value!.lat,
+              homeCoordinates.value!.lon,
+              elevation.value || 0,
+              sat.position.lat,
+              sat.position.lng,
+              sat.position.height
+            );
+            sat.distance = info.distance;
+          }
+        });
+        
+        // Sort by distance if available
+        satelliteList.sort((a, b) => {
+          if (a.distance === undefined && b.distance === undefined) return 0;
+          if (a.distance === undefined) return 1;
+          if (b.distance === undefined) return -1;
+          return a.distance - b.distance;
+        });
       }
       
       satellites.value = satelliteList;
@@ -766,6 +837,24 @@ function updateSatellitePosition(tle: string[]) {
     // Update the satellite feature's geometry
     satelliteFeature.value.setGeometry(new Point(satPoint));
     
+    // Update connecting line to first prediction point if path is shown
+    if (showPath.value && pathFeatures.value.length > 0) {
+      // Find the first predicted point feature
+      const firstPrediction = pathFeatures.value.find(feature => 
+        feature.getGeometry() instanceof Point
+      );
+      
+      if (firstPrediction && satelliteToPathLine.value) {
+        const geometry = firstPrediction.getGeometry();
+        if (geometry instanceof Point) {
+          const firstPoint = geometry.getCoordinates();
+          satelliteToPathLine.value.setGeometry(
+            new LineString([satPoint, firstPoint])
+          );
+        }
+      }
+    }
+    
     // Update satellite horizon polygon
     if (satelliteHorizonFeature.value) {
       const horizonPoints = calculateSatelliteHorizonPoints(position.lat, position.lng, satInfo.height);
@@ -977,6 +1066,16 @@ function startSatelliteTracking(satelliteName: string) {
 
   // Create a new feature for the satellite
   satelliteFeature.value = new Feature();
+  
+  // Create connecting line feature
+  satelliteToPathLine.value = new Feature();
+  satelliteToPathLine.value.setStyle(new Style({
+    stroke: new Stroke({
+      color: 'rgba(128, 128, 128, 0.4)', // Match path line style
+      width: 2
+    })
+  }));
+  
   satelliteFeature.value.setStyle([
     new Style({
       image: new Icon({
@@ -1028,6 +1127,7 @@ function startSatelliteTracking(satelliteName: string) {
   // Add features to sources
   vectorSource.value.addFeature(satelliteFeature.value);
   vectorSource.value.addFeature(satelliteHorizonFeature.value);
+  vectorSource.value.addFeature(satelliteToPathLine.value);
   lineSource.value.addFeature(lineOfSightFeature.value);
 
   // Update position immediately and then every second
@@ -1059,6 +1159,11 @@ function stopSatelliteTracking() {
   if (satelliteHorizonFeature.value && vectorSource.value) {
     vectorSource.value.removeFeature(satelliteHorizonFeature.value);
     satelliteHorizonFeature.value = null;
+  }
+
+  if (satelliteToPathLine.value && vectorSource.value) {
+    vectorSource.value.removeFeature(satelliteToPathLine.value);
+    satelliteToPathLine.value = null;
   }
 
   if (lineOfSightFeature.value && lineSource.value) {
