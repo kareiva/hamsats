@@ -438,7 +438,68 @@ function loadSavedHomeLocation() {
       fetchElevation(coords.lat, coords.lon);
     } catch (e) {
       console.error('Failed to parse saved home location:', e);
+      requestGeolocation();
     }
+  } else {
+    requestGeolocation();
+  }
+}
+
+function requestGeolocation() {
+  if (!mapInstance.value || !vectorSource.value) return;
+
+  if ('geolocation' in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords = {
+          lat: position.coords.latitude,
+          lon: position.coords.longitude
+        };
+        homeCoordinates.value = coords;
+        
+        // Create a point at the current location
+        const point = fromLonLat([coords.lon, coords.lat]);
+        homeFeature.value = new Feature({
+          geometry: new Point(point)
+        });
+        
+        // Style the feature with a green marker icon
+        homeFeature.value.setStyle(
+          new Style({
+            image: new Icon({
+              anchor: [0.5, 1],
+              anchorXUnits: 'fraction',
+              anchorYUnits: 'fraction',
+              src: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+              scale: 0.5
+            })
+          })
+        );
+        
+        // Add the feature to the source
+        vectorSource.value.addFeature(homeFeature.value);
+        
+        // Center and zoom the map on the current location
+        mapInstance.value.getView().setCenter(point);
+        mapInstance.value.getView().setZoom(12);
+        
+        // Save to session storage
+        sessionStorage.setItem('homeLocation', JSON.stringify(coords));
+        
+        // Fetch elevation for the current location
+        fetchElevation(coords.lat, coords.lon);
+        
+        console.log('Set home location to current position:', coords);
+      },
+      (error) => {
+        console.error('Error getting geolocation:', error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+      }
+    );
   }
 }
 
