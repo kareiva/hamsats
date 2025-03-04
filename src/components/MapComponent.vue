@@ -43,7 +43,7 @@
       <div v-if="homeCoordinates">
         Home Location: {{ homeCoordinates.lat.toFixed(6) }}° N, {{ homeCoordinates.lon.toFixed(6) }}° E
         <span v-if="elevation !== null"> | Elevation ASL: {{ elevation.toFixed(1) }} m | Elevation AGL: {{ aglHeight }} m</span>
-        <span v-if="selectedSatellite && satelliteInfo"> | Distance: {{ satelliteInfo.distance.toFixed(1) }} km | Elevation Angle: {{ satelliteInfo.elevationAngle.toFixed(1) }}°</span>
+        <span v-if="selectedSatellite && satelliteInfo"> | Distance: {{ satelliteInfo.distance.toFixed(1) }} km | Elevation Angle: {{ satelliteInfo.elevationAngle.toFixed(1) }}° | Azimuth: {{ satelliteInfo.azimuth.toFixed(1) }}°</span>
         <span v-else> | Fetching elevation...</span>
       </div>
       <div v-else>No home location set</div>
@@ -86,7 +86,7 @@ const satelliteFeature = ref<Feature | null>(null);
 const positionUpdateInterval = ref<number | null>(null);
 const lineOfSightFeature = ref<Feature | null>(null);
 const lineSource = ref<VectorSource | null>(null);
-const satelliteInfo = ref<{ distance: number; elevationAngle: number } | null>(null);
+const satelliteInfo = ref<{ distance: number; elevationAngle: number; azimuth: number } | null>(null);
 const satelliteHorizonFeature = ref<Feature | null>(null);
 const showPath = ref<boolean>(false);
 const pathFeatures = ref<Feature[]>([]);
@@ -576,10 +576,17 @@ function calculateSatelliteInfo(observerLat: number, observerLon: number, observ
   
   // Convert zenith angle to elevation angle (90° - zenith)
   const elevationAngle = -(90 - (zenithAngle * 180 / Math.PI));
+
+  // Calculate azimuth angle
+  const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) -
+           Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
+  const azimuth = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
   
   return {
     distance: slantRange,
-    elevationAngle: elevationAngle
+    elevationAngle: elevationAngle,
+    azimuth: azimuth
   };
 }
 
@@ -742,9 +749,18 @@ function updateSatellitePosition(tle: string[]) {
         // Get map size and calculate label position
         const mapSize = mapInstance.value.getSize() || [800, 600];
         const labelPoint = calculateLabelPosition(curvedPoints, mapSize);
+
+        // Calculate azimuth indicator line
+        const azimuthLength = 50; // pixels
+        const azimuthAngle = satelliteInfo.value.azimuth * Math.PI / 180;
+        const azimuthEnd = [
+          homePoint[0] + Math.sin(azimuthAngle) * azimuthLength,
+          homePoint[1] + Math.cos(azimuthAngle) * azimuthLength
+        ];
         
-        // Create styles array with line and text
+        // Create styles array with line, azimuth indicator, and text
         const styles = [
+          // Line of sight style
           new Style({
             stroke: new Stroke({
               color: isVisible ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)',
@@ -752,9 +768,18 @@ function updateSatellitePosition(tle: string[]) {
               lineDash: isVisible ? undefined : [5, 5]
             })
           }),
+          // Azimuth indicator style
+          new Style({
+            geometry: new LineString([homePoint, azimuthEnd]),
+            stroke: new Stroke({
+              color: 'rgba(255, 193, 7, 0.8)',
+              width: 2
+            })
+          }),
+          // Label style
           new Style({
             text: new Text({
-              text: `${satelliteInfo.value.distance.toFixed(0)} km\n${satelliteInfo.value.elevationAngle.toFixed(1)}°`,
+              text: `Dist: ${satelliteInfo.value.distance.toFixed(0)} km\nAz: ${satelliteInfo.value.azimuth.toFixed(1)}°\nEl. ${satelliteInfo.value.elevationAngle.toFixed(1)}°`,
               font: '14px monospace',
               fill: new Fill({
                 color: isVisible ? '#388E3C' : '#D32F2F'
@@ -804,6 +829,55 @@ async function updateSatellitePath(tle: string[]) {
       const position = getLatLngObj(tle, futureTime);
       positions.push(position);
     }
+    
+    // Create line feature connecting all points
+    const linePoints: number[][] = [];
+    let currentSegment: number[][] = [];
+    
+    for (let i = 0; i < positions.length; i++) {
+      const pos = positions[i];
+      const point = fromLonLat([pos.lng, pos.lat]);
+      
+      if (i > 0) {
+        // Check if there's a wrap-around between this point and the previous one
+        const prevPos = positions[i - 1];
+        const lonDiff = Math.abs(pos.lng - prevPos.lng);
+        
+        if (lonDiff > 180) {
+          // Wrap-around detected, start a new segment
+          if (currentSegment.length > 0) {
+            linePoints.push(currentSegment);
+            currentSegment = [];
+          }
+        }
+      }
+      
+      currentSegment.push(point);
+    }
+    
+    // Add the last segment if it exists
+    if (currentSegment.length > 0) {
+      linePoints.push(currentSegment);
+    }
+    
+    // Create a feature for each line segment
+    linePoints.forEach(segment => {
+      const pathLine = new Feature({
+        geometry: new LineString(segment)
+      });
+      
+      // Style the line
+      pathLine.setStyle(new Style({
+        stroke: new Stroke({
+          color: 'rgba(128, 128, 128, 0.4)', // Semi-transparent grey
+          width: 2
+        })
+      }));
+      
+      // Add line feature
+      pathFeatures.value.push(pathLine);
+      if (vectorSource.value) vectorSource.value.addFeature(pathLine);
+    });
     
     // Create features for each position
     positions.forEach((pos, index) => {
@@ -886,7 +960,7 @@ function startSatelliteTracking(satelliteName: string) {
     updateSatellitePath(satellite.tle);
     pathUpdateInterval.value = window.setInterval(() => {
       updateSatellitePath(satellite.tle);
-    }, 60000); // Update every minute
+    }, 60000);
   }
 }
 
@@ -923,8 +997,11 @@ function stopSatelliteTracking() {
   pathFeatures.value = [];
 }
 
-// Add watch for showPath changes
+// Watch for changes in showPath changes
 watch(showPath, (newValue) => {
+  // Save to session storage
+  sessionStorage.setItem('showPath', newValue.toString());
+  
   if (!selectedSatellite.value) return;
   
   const satellite = satellites.value.find(sat => sat.name === selectedSatellite.value);
@@ -953,6 +1030,12 @@ onUnmounted(() => {
 });
 
 onMounted(() => {
+  // Load path visibility state from session storage
+  const savedPathState = sessionStorage.getItem('showPath');
+  if (savedPathState !== null) {
+    showPath.value = savedPathState === 'true';
+  }
+  
   // Load satellites from file
   loadSatellites();
   
