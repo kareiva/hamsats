@@ -3,7 +3,6 @@
     <div id="map" class="map-container">
       <div class="custom-controls top-right">
         <button @click="setHomeLocation" class="home-button">Set Home Location</button>
-        <button @click="calculateVisibleHorizon" class="horizon-button" :disabled="!homeCoordinates">Show Visible Horizon</button>
         <div class="slider-container" v-if="homeCoordinates">
           <label for="agl-slider">AGL: {{ aglHeight }}m</label>
           <div class="vertical-slider-wrapper">
@@ -14,7 +13,7 @@
               min="0" 
               max="500" 
               step="1"
-              @change="calculateVisibleHorizon"
+              @input="calculateVisibleHorizon"
               class="vertical-slider"
             >
             <div class="slider-markers">
@@ -29,7 +28,7 @@
     <div class="status-bar">
       <div v-if="homeCoordinates">
         Home Location: {{ homeCoordinates.lat.toFixed(6) }}° N, {{ homeCoordinates.lon.toFixed(6) }}° E
-        <span v-if="elevation !== null"> | Elevation: {{ elevation.toFixed(1) }} m</span>
+        <span v-if="elevation !== null"> | Elevation ASL: {{ elevation.toFixed(1) }} m | Elevation AGL: {{ aglHeight }} m</span>
         <span v-else> | Fetching elevation...</span>
       </div>
       <div v-else>No home location set</div>
@@ -82,11 +81,22 @@ watch(homeCoordinates, async (newCoords) => {
     // Fetch elevation data
     try {
       await fetchElevation(newCoords.lat, newCoords.lon);
+      // Calculate horizon after elevation is fetched
+      if (elevation.value !== null) {
+        calculateVisibleHorizon();
+      }
     } catch (error) {
       console.error('Failed to fetch elevation:', error);
     }
   }
 }, { deep: true });
+
+// Watch for changes in elevation to calculate horizon
+watch(elevation, (newElevation) => {
+  if (newElevation !== null && homeCoordinates.value) {
+    calculateVisibleHorizon();
+  }
+}, { immediate: false });
 
 // Calculate the distance to the horizon based on observer height
 function calculateHorizonDistance(observerHeight: number): number {
@@ -418,7 +428,7 @@ onMounted(() => {
     gap: 5px;
   }
   
-  .home-button, .horizon-button {
+  .home-button {
     background-color: rgba(0, 60, 136, 0.7);
     color: white;
     border: none;
@@ -429,11 +439,6 @@ onMounted(() => {
     
     &:hover {
       background-color: rgba(0, 60, 136, 0.9);
-    }
-    
-    &:disabled {
-      background-color: rgba(0, 60, 136, 0.3);
-      cursor: not-allowed;
     }
   }
   
