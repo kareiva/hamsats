@@ -206,11 +206,23 @@ function requestGeolocation() {
           homeLocationFeature.setLocation(coords);
         }
         
-        // Center the map on the location
+        // Center the map on the location and set zoom based on horizon distance
         if (mapInstance.value) {
           const point = fromLonLat([coords.lon, coords.lat]);
           mapInstance.value.getView().setCenter(point);
-          mapInstance.value.getView().setZoom(12);
+          mapInstance.value.getView().setZoom(9); // Set fixed zoom level for regional view
+          
+          const horizonDistance = calculateHorizonDistance(aglHeight.value);
+          const view = mapInstance.value.getView();
+          const mapSize = mapInstance.value.getSize();
+          if (mapSize) {
+            const targetWidth = horizonDistance * 1000 * 12; // Make horizon diameter 1/6 of map width (2 for diameter * 6 for scale)
+            const resolution = targetWidth / mapSize[0];
+            const zoom = view.getZoomForResolution(resolution);
+            if (zoom) {
+              view.setZoom(zoom);
+            }
+          }
         }
         
         sessionStorage.setItem('homeLocation', JSON.stringify(coords));
@@ -283,7 +295,7 @@ watch(selectedSatellite, (newSatellite) => {
       // Stop tracking and remove old satellite features
       if (currentSatelliteFeature.value) {
         currentSatelliteFeature.value.stopTracking();
-        currentSatelliteFeature.value.remove(); // Ensure complete removal of old features
+        currentSatelliteFeature.value.remove();
       }
       
       currentSatelliteFeature.value = new SatelliteFeature(
@@ -295,12 +307,38 @@ watch(selectedSatellite, (newSatellite) => {
       
       currentSatelliteFeature.value.setShowPath(showPath.value);
       
-      // Initial update
+      // Initial update and get satellite position
+      let satInfo = null;
       if (homeCoordinates.value && elevation.value !== null) {
-        satelliteInfo.value = currentSatelliteFeature.value.updatePosition(
+        satInfo = currentSatelliteFeature.value.updatePosition(
           homeCoordinates.value,
           elevation.value + aglHeight.value
         );
+        satelliteInfo.value = satInfo;
+
+        // Get current satellite position
+        const satPosition = currentSatelliteFeature.value.getCurrentPosition();
+        const homePoint = fromLonLat([homeCoordinates.value.lon, homeCoordinates.value.lat]);
+        const satPoint = fromLonLat([satPosition.lng, satPosition.lat]);
+
+        // Create a view extent that includes both points with padding
+        if (mapInstance.value) {
+          const view = mapInstance.value.getView();
+          const minX = Math.min(homePoint[0], satPoint[0]);
+          const minY = Math.min(homePoint[1], satPoint[1]);
+          const maxX = Math.max(homePoint[0], satPoint[0]);
+          const maxY = Math.max(homePoint[1], satPoint[1]);
+          
+          // Add 20% padding around the extent
+          const padding = [(maxX - minX) * 0.2, (maxY - minY) * 0.2];
+          const extent = [minX - padding[0], minY - padding[1], maxX + padding[0], maxY + padding[1]];
+          
+          // Animate view to fit the extent
+          view.fit(extent, {
+            duration: 1000,
+            padding: [50, 50, 50, 50]
+          });
+        }
       }
       
       // Start tracking with periodic updates
@@ -367,23 +405,10 @@ onMounted(() => {
       homeLocationFeature.setLocation(coords);
       fetchElevation(coords.lat, coords.lon);
       
-      // Center the map on the saved location with city-level zoom
+      // Center the map on the saved location and set zoom based on horizon distance
       const point = fromLonLat([coords.lon, coords.lat]);
       mapInstance.value.getView().setCenter(point);
-      mapInstance.value.getView().setZoom(12); // City-level zoom
-      
-      // Calculate appropriate zoom level based on horizon radius
-      const horizonDistance = calculateHorizonDistance(aglHeight.value);
-      const view = mapInstance.value.getView();
-      const mapSize = mapInstance.value.getSize();
-      if (mapSize) {
-        const targetWidth = horizonDistance * 6; // Make horizon radius 1/6 of map width
-        const resolution = targetWidth / mapSize[0];
-        const zoom = view.getZoomForResolution(resolution);
-        if (zoom) {
-          view.setZoom(zoom);
-        }
-      }
+      mapInstance.value.getView().setZoom(9); // Set fixed zoom level for regional view
     } catch (e) {
       console.error('Failed to parse saved home location:', e);
       requestGeolocation();
