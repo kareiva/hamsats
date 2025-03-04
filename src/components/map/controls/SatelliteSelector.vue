@@ -1,12 +1,32 @@
 <template>
   <div class="satellite-selector" v-if="homeCoordinates">
-    <label for="satellite-select">Select Satellite:</label>
-    <select id="satellite-select" :value="selectedSatellite" @input="e => emit('update:selectedSatellite', (e.target as HTMLSelectElement).value)" class="satellite-dropdown">
-      <option value="">-- Select a satellite --</option>
-      <option v-for="sat in satellites" :key="sat.name" :value="sat.name">
-        {{ sat.name }}{{ sat.distance !== undefined ? ` (${sat.distance.toFixed(0)} km)` : '' }}
-      </option>
-    </select>
+    <div class="search-container">
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search satellites..."
+        v-model="searchQuery"
+        @focus="showAutocomplete = true"
+        @input="onSearchInput"
+        @keydown.down.prevent="navigateResults(1)"
+        @keydown.up.prevent="navigateResults(-1)"
+        @keydown.enter.prevent="selectHighlighted"
+      />
+      <div class="autocomplete-list" v-if="showAutocomplete && filteredSatellites.length > 0">
+        <div
+          v-for="(sat, index) in filteredSatellites"
+          :key="sat.name"
+          class="autocomplete-item"
+          :class="{ 
+            'selected': sat.name === selectedSatellite,
+            'highlighted': index === highlightedIndex 
+          }"
+          @click="selectSatellite(sat.name)"
+        >
+          {{ sat.name }}{{ sat.distance !== undefined ? ` (${sat.distance.toFixed(0)} km)` : '' }}
+        </div>
+      </div>
+    </div>
     <div class="path-control" v-if="selectedSatellite">
       <label>
         <input type="checkbox" v-model="localShowPath"> Show future path
@@ -16,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import type { HomeLocationCoordinates } from '../features/HomeLocation';
 
 export interface Satellite {
@@ -42,7 +62,63 @@ const emit = defineEmits<{
   (e: 'update:showPath', value: boolean): void;
 }>();
 
+const searchQuery = ref('');
+const showAutocomplete = ref(false);
 const localShowPath = ref(props.showPath);
+const highlightedIndex = ref(-1);
+
+const filteredSatellites = computed(() => {
+  const query = searchQuery.value.toLowerCase();
+  return props.satellites
+    .filter(sat => sat.name.toLowerCase().includes(query))
+    .slice(0, 10);
+});
+
+function selectSatellite(name: string) {
+  emit('update:selectedSatellite', name);
+  searchQuery.value = name;
+  showAutocomplete.value = false;
+  highlightedIndex.value = -1;
+}
+
+function navigateResults(direction: number) {
+  if (!showAutocomplete.value || filteredSatellites.value.length === 0) {
+    showAutocomplete.value = true;
+    highlightedIndex.value = 0;
+    return;
+  }
+
+  highlightedIndex.value = Math.max(
+    -1,
+    Math.min(
+      filteredSatellites.value.length - 1,
+      highlightedIndex.value + direction
+    )
+  );
+}
+
+function selectHighlighted() {
+  if (highlightedIndex.value >= 0 && highlightedIndex.value < filteredSatellites.value.length) {
+    selectSatellite(filteredSatellites.value[highlightedIndex.value].name);
+  }
+}
+
+function onSearchInput() {
+  if (searchQuery.value === '') {
+    emit('update:selectedSatellite', '');
+  }
+  showAutocomplete.value = true;
+  highlightedIndex.value = -1;
+}
+
+// Close autocomplete when clicking outside
+window.addEventListener('click', (e: MouseEvent) => {
+  const target = e.target as HTMLElement;
+  if (!target.closest('.satellite-selector')) {
+    showAutocomplete.value = false;
+    highlightedIndex.value = -1;
+  }
+});
 
 watch(localShowPath, (newValue) => {
   emit('update:showPath', newValue);
@@ -50,6 +126,19 @@ watch(localShowPath, (newValue) => {
 
 watch(() => props.showPath, (newValue) => {
   localShowPath.value = newValue;
+});
+
+watch(() => props.selectedSatellite, (newValue) => {
+  if (newValue && newValue !== searchQuery.value) {
+    const satellite = props.satellites.find(sat => sat.name === newValue);
+    if (satellite) {
+      searchQuery.value = satellite.name;
+    }
+  }
+});
+
+watch(filteredSatellites, () => {
+  highlightedIndex.value = -1;
 });
 </script>
 
@@ -60,27 +149,61 @@ watch(() => props.showPath, (newValue) => {
   padding: 8px;
   border-radius: 4px;
   
-  label {
-    display: block;
-    margin-bottom: 5px;
-    font-size: 14px;
-    color: #333;
-    text-align: center;
-  }
-  
-  .satellite-dropdown {
+  .search-container {
+    position: relative;
     width: 100%;
-    padding: 6px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    background-color: white;
-    font-size: 14px;
-    color: #333;
     
-    &:focus {
-      outline: none;
-      border-color: rgba(0, 60, 136, 0.7);
-      box-shadow: 0 0 0 2px rgba(0, 60, 136, 0.3);
+    .search-input {
+      width: 100%;
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background-color: white;
+      font-size: 14px;
+      color: #333;
+      
+      &:focus {
+        outline: none;
+        border-color: rgba(0, 60, 136, 0.7);
+        box-shadow: 0 0 0 2px rgba(0, 60, 136, 0.3);
+      }
+    }
+    
+    .autocomplete-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      background-color: white;
+      border: 1px solid #ccc;
+      border-radius: 0 0 4px 4px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      
+      .autocomplete-item {
+        padding: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        color: #333;
+        
+        &:hover {
+          background-color: rgba(0, 60, 136, 0.1);
+        }
+        
+        &.highlighted {
+          background-color: rgba(0, 60, 136, 0.1);
+        }
+        
+        &.selected {
+          background-color: rgba(0, 60, 136, 0.2);
+        }
+        
+        &.highlighted.selected {
+          background-color: rgba(0, 60, 136, 0.3);
+        }
+      }
     }
   }
   
