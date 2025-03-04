@@ -121,9 +121,70 @@ async function loadSatellites() {
     satellites.value = satelliteList;
     console.log(`Loaded ${satelliteList.length} satellites from file`);
     
-    loadSavedSatelliteSelection();
+    // Load saved satellite selection after satellites are loaded
+    const savedSatellite = loadSetting<string>('selectedSatellite', '');
+    if (savedSatellite) {
+      const satellite = satelliteList.find(sat => sat.name === savedSatellite);
+      if (satellite) {
+        selectedSatellite.value = savedSatellite;
+        console.log(`Loaded saved satellite selection: ${savedSatellite}`);
+        
+        // Initialize the satellite feature
+        currentSatelliteFeature.value = new SatelliteFeature(
+          satellite.name,
+          satellite.tle,
+          mapLayers.vectorSource,
+          mapLayers.lineSource
+        );
+        
+        currentSatelliteFeature.value.setShowPath(showPath.value);
+        
+        // Initial update and get satellite position
+        if (homeCoordinates.value && elevation.value !== null) {
+          const satInfo = currentSatelliteFeature.value.updatePosition(
+            homeCoordinates.value,
+            elevation.value + aglHeight.value
+          );
+          satelliteInfo.value = satInfo;
 
-    // Initialize nearest satellites if no satellite is selected and we have home coordinates
+          // Get current satellite position and fit view
+          const satPosition = currentSatelliteFeature.value.getCurrentPosition();
+          const homePoint = fromLonLat([homeCoordinates.value.lon, homeCoordinates.value.lat]);
+          const satPoint = fromLonLat([satPosition.lng, satPosition.lat]);
+
+          if (mapInstance.value) {
+            const view = mapInstance.value.getView();
+            const minX = Math.min(homePoint[0], satPoint[0]);
+            const minY = Math.min(homePoint[1], satPoint[1]);
+            const maxX = Math.max(homePoint[0], satPoint[0]);
+            const maxY = Math.max(homePoint[1], satPoint[1]);
+            
+            const padding = [(maxX - minX) * 0.2, (maxY - minY) * 0.2];
+            const extent = [minX - padding[0], minY - padding[1], maxX + padding[0], maxY + padding[1]];
+            
+            view.fit(extent, {
+              duration: 1000,
+              padding: [50, 50, 50, 50]
+            });
+          }
+
+          // Start tracking with periodic updates
+          const updateInterval = window.setInterval(() => {
+            if (homeCoordinates.value && elevation.value !== null) {
+              satelliteInfo.value = currentSatelliteFeature.value?.updatePosition(
+                homeCoordinates.value,
+                elevation.value + aglHeight.value
+              ) || null;
+            }
+          }, 1000);
+          
+          currentSatelliteFeature.value.setUpdateInterval(updateInterval);
+        }
+        return;
+      }
+    }
+
+    // If no valid saved selection or initialization failed, show nearest satellites
     if (!selectedSatellite.value && homeCoordinates.value && satellites.value.length > 0) {
       if (!nearestSatellitesFeature.value) {
         nearestSatellitesFeature.value = new NearestSatellitesFeature(mapLayers.vectorSource);
@@ -204,23 +265,6 @@ function updateSatelliteDistances(satelliteList: typeof satellites.value) {
     if (b.distance === undefined) return -1;
     return a.distance - b.distance;
   });
-}
-
-// Function to load saved satellite selection or set default
-function loadSavedSatelliteSelection() {
-  const savedSatellite = loadSetting<string>('selectedSatellite', '');
-  
-  if (savedSatellite) {
-    const satelliteExists = satellites.value.some(sat => sat.name === savedSatellite);
-    if (satelliteExists) {
-      selectedSatellite.value = savedSatellite;
-      console.log(`Loaded saved satellite selection: ${savedSatellite}`);
-      return;
-    }
-  }
-  
-  // If no saved selection, keep it empty to show nearest satellites
-  selectedSatellite.value = '';
 }
 
 // Fetch elevation data from Open-Elevation API
@@ -526,7 +570,6 @@ watch(showPath, (newValue) => {
 // Initialize map on component mount
 onMounted(() => {
   showPath.value = loadSetting('showPath', false);
-  selectedSatellite.value = loadSetting('selectedSatellite', '');
   
   mapLayers = createMapLayers();
   mapInstance.value = initializeMap('map', mapLayers);
@@ -559,13 +602,12 @@ onMounted(() => {
       // Center the map on the saved location
       const point = fromLonLat([savedLocation.lon, savedLocation.lat]);
       mapInstance.value.getView().setCenter(point);
-      mapInstance.value.getView().setZoom(9); // Set initial zoom, will be adjusted after satellites load
+      mapInstance.value.getView().setZoom(9);
     } catch (e) {
       console.error('Failed to parse saved home location:', e);
       requestGeolocation();
     }
   } else {
-    // If no saved location, request geolocation
     requestGeolocation();
   }
   
