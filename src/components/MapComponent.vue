@@ -8,6 +8,8 @@
     <div class="status-bar">
       <div v-if="homeCoordinates">
         Home Location: {{ homeCoordinates.lat.toFixed(6) }}° N, {{ homeCoordinates.lon.toFixed(6) }}° E
+        <span v-if="elevation !== null"> | Elevation: {{ elevation.toFixed(1) }} m</span>
+        <span v-else> | Fetching elevation...</span>
       </div>
       <div v-else>No home location set</div>
     </div>
@@ -33,13 +35,58 @@ const mapInstance = ref<Map | null>(null);
 const homeFeature = ref<Feature | null>(null);
 const vectorSource = ref<VectorSource | null>(null);
 const homeCoordinates = ref<{ lat: number; lon: number } | null>(null);
+const elevation = ref<number | null>(null);
 
-// Save coordinates to session storage whenever they change
-watch(homeCoordinates, (newCoords) => {
+// Watch for changes in home coordinates to fetch elevation
+watch(homeCoordinates, async (newCoords) => {
   if (newCoords) {
+    // Save to session storage
     sessionStorage.setItem('homeLocation', JSON.stringify(newCoords));
+    
+    // Reset elevation while fetching
+    elevation.value = null;
+    
+    // Fetch elevation data
+    try {
+      await fetchElevation(newCoords.lat, newCoords.lon);
+    } catch (error) {
+      console.error('Failed to fetch elevation:', error);
+    }
   }
 }, { deep: true });
+
+// Fetch elevation data from Open-Elevation API
+async function fetchElevation(lat: number, lon: number) {
+  try {
+    // Using Open-Elevation API
+    const response = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
+    const data = await response.json();
+    
+    if (data && data.results && data.results.length > 0) {
+      elevation.value = data.results[0].elevation;
+      console.log(`Elevation at (${lat}, ${lon}): ${elevation.value}m`);
+    } else {
+      console.error('Invalid elevation data response:', data);
+      elevation.value = null;
+    }
+  } catch (error) {
+    console.error('Error fetching elevation data:', error);
+    elevation.value = null;
+    
+    // Fallback to alternative API if the first one fails
+    try {
+      const response = await fetch(`https://elevation-api.io/api/elevation?points=(${lat},${lon})`);
+      const data = await response.json();
+      
+      if (data && data.elevations && data.elevations.length > 0) {
+        elevation.value = data.elevations[0].elevation;
+        console.log(`Elevation (fallback) at (${lat}, ${lon}): ${elevation.value}m`);
+      }
+    } catch (fallbackError) {
+      console.error('Fallback elevation API also failed:', fallbackError);
+    }
+  }
+}
 
 // Load saved home location from session storage
 function loadSavedHomeLocation() {
@@ -75,6 +122,9 @@ function loadSavedHomeLocation() {
       mapInstance.value.getView().setCenter(point);
       
       console.log('Loaded saved home location:', coords);
+      
+      // Fetch elevation for the saved location
+      fetchElevation(coords.lat, coords.lon);
     } catch (e) {
       console.error('Failed to parse saved home location:', e);
     }
