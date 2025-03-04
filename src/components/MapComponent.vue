@@ -59,7 +59,7 @@ import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
 import Polygon from 'ol/geom/Polygon';
 import Circle from 'ol/geom/Circle';
-import { Style, Icon, Fill, Stroke } from 'ol/style';
+import { Style, Icon, Fill, Stroke, Text } from 'ol/style';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import Translate from 'ol/interaction/Translate';
 import { circular as createCircularPolygon } from 'ol/geom/Polygon';
@@ -613,8 +613,71 @@ function calculateSatelliteHorizonPoints(satLat: number, satLon: number, satAlt:
   return points;
 }
 
+function calculateLabelPosition(curvedPoints: number[][], mapSize: number[]): number[] {
+  if (!mapInstance.value) return curvedPoints[Math.floor(curvedPoints.length / 2)];
+  
+  const view = mapInstance.value.getView();
+  const extent = view.calculateExtent(mapSize);
+  
+  // Find the first point that's outside the viewport
+  let lastInsidePoint = null;
+  let firstOutsidePoint = null;
+  
+  for (let i = 0; i < curvedPoints.length; i++) {
+    const point = curvedPoints[i];
+    const isInside = point[0] >= extent[0] && point[0] <= extent[2] &&
+                    point[1] >= extent[1] && point[1] <= extent[3];
+    
+    if (isInside) {
+      lastInsidePoint = point;
+    } else if (lastInsidePoint) {
+      firstOutsidePoint = point;
+      break;
+    }
+  }
+  
+  // If we found both points, find the exact intersection
+  if (lastInsidePoint && firstOutsidePoint) {
+    const [x1, y1] = lastInsidePoint;
+    const [x2, y2] = firstOutsidePoint;
+    
+    // Find intersection with viewport edges
+    let t = 1.0;
+    
+    // Check intersection with left edge
+    if (x2 < extent[0]) {
+      const tx = (extent[0] - x1) / (x2 - x1);
+      if (tx >= 0 && tx < t) t = tx;
+    }
+    // Check intersection with right edge
+    else if (x2 > extent[2]) {
+      const tx = (extent[2] - x1) / (x2 - x1);
+      if (tx >= 0 && tx < t) t = tx;
+    }
+    
+    // Check intersection with bottom edge
+    if (y2 < extent[1]) {
+      const ty = (extent[1] - y1) / (y2 - y1);
+      if (ty >= 0 && ty < t) t = ty;
+    }
+    // Check intersection with top edge
+    else if (y2 > extent[3]) {
+      const ty = (extent[3] - y1) / (y2 - y1);
+      if (ty >= 0 && ty < t) t = ty;
+    }
+    
+    // Calculate intersection point
+    const x = x1 + (x2 - x1) * t;
+    const y = y1 + (y2 - y1) * t;
+    return [x, y];
+  }
+  
+  // Fallback to midpoint if no intersection found
+  return curvedPoints[Math.floor(curvedPoints.length / 2)];
+}
+
 function updateSatellitePosition(tle: string[]) {
-  if (!satelliteFeature.value || !homeCoordinates.value) return;
+  if (!satelliteFeature.value || !homeCoordinates.value || !mapInstance.value) return;
 
   try {
     // Get current position and velocity
@@ -636,7 +699,7 @@ function updateSatellitePosition(tle: string[]) {
     // Update satellite info if we have home coordinates and elevation
     if (homeCoordinates.value && elevation.value !== null) {
       const observerAlt = elevation.value + Number(aglHeight.value);
-      const satAlt = satInfo.height; // Use height from TLE data
+      const satAlt = satInfo.height;
       
       satelliteInfo.value = calculateSatelliteInfo(
         homeCoordinates.value.lat,
@@ -667,15 +730,44 @@ function updateSatellitePosition(tle: string[]) {
       // Update line geometry and style
       if (lineOfSightFeature.value) {
         lineOfSightFeature.value.setGeometry(new LineString(curvedPoints));
-        lineOfSightFeature.value.setStyle(
+        
+        // Get map size and calculate label position
+        const mapSize = mapInstance.value.getSize() || [800, 600];
+        const labelPoint = calculateLabelPosition(curvedPoints, mapSize);
+        
+        // Create styles array with line and text
+        const styles = [
           new Style({
             stroke: new Stroke({
               color: isVisible ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)',
               width: 2,
               lineDash: isVisible ? undefined : [5, 5]
             })
+          }),
+          new Style({
+            text: new Text({
+              text: `${satelliteInfo.value.distance.toFixed(0)} km\n${satelliteInfo.value.elevationAngle.toFixed(1)}°`,
+              font: '14px monospace',
+              fill: new Fill({
+                color: isVisible ? '#388E3C' : '#D32F2F'
+              }),
+              stroke: new Stroke({
+                color: 'white',
+                width: 3
+              }),
+              backgroundFill: new Fill({
+                color: 'rgba(255, 255, 255, 0.8)'
+              }),
+              padding: [5, 5, 5, 5],
+              offsetY: -15,
+              textAlign: 'center',
+              textBaseline: 'bottom'
+            }),
+            geometry: new Point(labelPoint)
           })
-        );
+        ];
+        
+        lineOfSightFeature.value.setStyle(styles);
       }
     }
     
