@@ -23,6 +23,15 @@
             </div>
           </div>
         </div>
+        <div class="satellite-selector" v-if="homeCoordinates">
+          <label for="satellite-select">Select Satellite:</label>
+          <select id="satellite-select" v-model="selectedSatellite" class="satellite-dropdown">
+            <option value="">-- Select a satellite --</option>
+            <option v-for="sat in satellites" :key="sat.name" :value="sat.name">
+              {{ sat.name }}
+            </option>
+          </select>
+        </div>
       </div>
     </div>
     <div class="status-bar">
@@ -62,6 +71,136 @@ const homeCoordinates = ref<{ lat: number; lon: number } | null>(null);
 const elevation = ref<number | null>(null);
 const horizonFeature = ref<Feature | null>(null);
 const aglHeight = ref<number>(0); // Default AGL height is 0 meters
+const selectedSatellite = ref<string>(''); // Selected satellite
+const satellites = ref<{ name: string; tle: string[] }[]>([]);
+
+// Watch for changes in selectedSatellite to save to session storage
+watch(selectedSatellite, (newSatellite) => {
+  if (newSatellite) {
+    sessionStorage.setItem('selectedSatellite', newSatellite);
+    console.log(`Saved selected satellite to session: ${newSatellite}`);
+  }
+});
+
+// Function to load satellites from file
+async function loadSatellites() {
+  try {
+    const response = await fetch('/elements/amateur.txt');
+    if (!response.ok) {
+      throw new Error(`Failed to load satellites: ${response.status} ${response.statusText}`);
+    }
+    
+    const text = await response.text();
+    const lines = text.split('\n');
+    const satelliteList: { name: string; tle: string[] }[] = [];
+    
+    // Process TLE data (3 lines per satellite: name, line1, line2)
+    for (let i = 0; i < lines.length; i += 3) {
+      if (i + 2 < lines.length) {
+        const name = lines[i].trim();
+        const line1 = lines[i + 1].trim();
+        const line2 = lines[i + 2].trim();
+        
+        // Validate TLE format (basic check)
+        if (name && line1 && line2 && line1.startsWith('1 ') && line2.startsWith('2 ')) {
+          satelliteList.push({
+            name,
+            tle: [line1, line2]
+          });
+        }
+      }
+    }
+    
+    satellites.value = satelliteList;
+    console.log(`Loaded ${satelliteList.length} satellites from file`);
+    
+    // Load saved satellite selection or set default to ISS
+    loadSavedSatelliteSelection();
+  } catch (error) {
+    console.error('Error loading satellites:', error);
+    
+    // Try loading from the project space directly
+    try {
+      const response = await fetch('/src/elements/amateur.txt');
+      if (!response.ok) {
+        throw new Error(`Failed to load satellites from project space: ${response.status} ${response.statusText}`);
+      }
+      
+      const text = await response.text();
+      const lines = text.split('\n');
+      const satelliteList: { name: string; tle: string[] }[] = [];
+      
+      // Process TLE data (3 lines per satellite: name, line1, line2)
+      for (let i = 0; i < lines.length; i += 3) {
+        if (i + 2 < lines.length) {
+          const name = lines[i].trim();
+          const line1 = lines[i + 1].trim();
+          const line2 = lines[i + 2].trim();
+          
+          // Validate TLE format (basic check)
+          if (name && line1 && line2 && line1.startsWith('1 ') && line2.startsWith('2 ')) {
+            satelliteList.push({
+              name,
+              tle: [line1, line2]
+            });
+          }
+        }
+      }
+      
+      satellites.value = satelliteList;
+      console.log(`Loaded ${satelliteList.length} satellites from project space`);
+      
+      // Load saved satellite selection or set default to ISS
+      loadSavedSatelliteSelection();
+    } catch (secondError) {
+      console.error('Error loading satellites from project space:', secondError);
+      // Fallback to sample satellites if file loading fails
+      satellites.value = [
+        { name: 'ISS (ZARYA)', tle: ['1 25544U 98067A   17206.18396726  .00001961  00000-0  36771-4 0  9993', '2 25544  51.6400 208.9163 0006317  69.9862  25.2906 15.54225995 67660'] },
+        { name: 'NOAA-19', tle: ['1 33591U 09005A   23305.51689030  .00000076  00000+0  65128-4 0  9992', '2 33591  99.1949 150.2287 0013223 223.4876 136.5274 14.12501878 761962'] },
+        { name: 'AMSAT-OSCAR 7', tle: ['1 07530U 74089B   23305.84246462 -.00000030  00000+0  10000-3 0  9996', '2 07530 101.4038 287.7831 0011925 349.4315  10.6549 12.53637849 26729'] }
+      ];
+      
+      // Load saved satellite selection or set default to ISS
+      loadSavedSatelliteSelection();
+    }
+  }
+}
+
+// Function to load saved satellite selection or set default
+function loadSavedSatelliteSelection() {
+  const savedSatellite = sessionStorage.getItem('selectedSatellite');
+  
+  if (savedSatellite) {
+    // Check if the saved satellite exists in the current list
+    const satelliteExists = satellites.value.some(sat => sat.name === savedSatellite);
+    
+    if (satelliteExists) {
+      selectedSatellite.value = savedSatellite;
+      console.log(`Loaded saved satellite selection: ${savedSatellite}`);
+    } else {
+      // If saved satellite doesn't exist in current list, default to ISS
+      setDefaultSatellite();
+    }
+  } else {
+    // If no saved selection, default to ISS
+    setDefaultSatellite();
+  }
+}
+
+// Function to set default satellite to ISS
+function setDefaultSatellite() {
+  const issIndex = satellites.value.findIndex(sat => sat.name.includes('ISS'));
+  
+  if (issIndex >= 0) {
+    selectedSatellite.value = satellites.value[issIndex].name;
+    console.log(`Set default satellite to: ${selectedSatellite.value}`);
+  } else if (satellites.value.length > 0) {
+    // If ISS not found, use the first satellite in the list
+    selectedSatellite.value = satellites.value[0].name;
+    console.log(`ISS not found, using first satellite: ${selectedSatellite.value}`);
+  }
+}
 
 // Watch for changes in home coordinates to fetch elevation
 watch(homeCoordinates, async (newCoords) => {
@@ -324,6 +463,9 @@ function setHomeLocation() {
 }
 
 onMounted(() => {
+  // Load satellites from file
+  loadSatellites();
+  
   // Create vector source and layer for the home location marker
   vectorSource.value = new VectorSource();
   const vectorLayer = new VectorLayer({
@@ -540,6 +682,37 @@ onMounted(() => {
             margin-bottom: -6px;
           }
         }
+      }
+    }
+  }
+  
+  .satellite-selector {
+    margin-top: 10px;
+    background-color: rgba(255, 255, 255, 0.7);
+    padding: 8px;
+    border-radius: 4px;
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+      color: #333;
+      text-align: center;
+    }
+    
+    .satellite-dropdown {
+      width: 100%;
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background-color: white;
+      font-size: 14px;
+      color: #333;
+      
+      &:focus {
+        outline: none;
+        border-color: rgba(0, 60, 136, 0.7);
+        box-shadow: 0 0 0 2px rgba(0, 60, 136, 0.3);
       }
     }
   }
