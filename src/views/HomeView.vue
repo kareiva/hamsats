@@ -3,5 +3,5 @@
 </template>
 
 <script setup lang="ts">
-import MapComponent from '@/components/MapComponent.vue';
+import MapComponent from '@/components/map/MapComponent.vue';
 </script> 
