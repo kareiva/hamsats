@@ -1,0 +1,33 @@
+[
+  {
+    "uuid": "ZwdQUwqRbFETGnLAxoH9JF",
+    "description": "TLM Mobitex GMSK",
+    "alive": true,
+    "type": "Transmitter",
+    "uplink_low": null,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 435950000,
+    "downlink_high": null,
+    "downlink_drift": null,
+    "mode": "GMSK",
+    "mode_id": 63,
+    "uplink_mode": null,
+    "invert": false,
+    "baud": 4800,
+    "sat_id": "XFUT-4878-1223-5887-3249",
+    "norad_cat_id": 35933,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2024-09-27T13:55:47.166643Z",
+    "citation": "From the team, coordination is done but the sight not updated",
+    "service": "Amateur",
+    "iaru_coordination": "IARU Coordinated",
+    "iaru_coordination_url": "https://iaru.amsat-uk.org/informal_detail.php?serialnum=86",
+    "itu_notification": {
+      "urls": []
+    },
+    "frequency_violation": false,
+    "unconfirmed": false
+  }
+]

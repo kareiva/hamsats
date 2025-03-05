@@ -1,0 +1,33 @@
+[
+  {
+    "uuid": "84i7RcGzy3QTCzM9GaRYmP",
+    "description": "Mode U - FSK 9600 AX.25",
+    "alive": true,
+    "type": "Transmitter",
+    "uplink_low": null,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 435600000,
+    "downlink_high": null,
+    "downlink_drift": -2296,
+    "mode": "FSK",
+    "mode_id": 72,
+    "uplink_mode": null,
+    "invert": false,
+    "baud": 9600,
+    "sat_id": "WDIT-2736-3800-1720-7555",
+    "norad_cat_id": 43880,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2021-06-21T09:00:37.467599Z",
+    "citation": "CITATION NEEDED - https://xkcd.com/285/",
+    "service": "Amateur",
+    "iaru_coordination": "IARU Coordinated",
+    "iaru_coordination_url": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=627",
+    "itu_notification": {
+      "urls": []
+    },
+    "frequency_violation": false,
+    "unconfirmed": false
+  }
+]

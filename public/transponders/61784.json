@@ -1,0 +1,33 @@
+[
+  {
+    "uuid": "DELFiUrNXdbSo7cbyPXomZ",
+    "description": "FSK1k2 - AX.25 Beacon",
+    "alive": true,
+    "type": "Transmitter",
+    "uplink_low": null,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 437400000,
+    "downlink_high": null,
+    "downlink_drift": null,
+    "mode": "FSK",
+    "mode_id": 72,
+    "uplink_mode": null,
+    "invert": false,
+    "baud": 1200,
+    "sat_id": "WEXS-3459-9433-8558-2912",
+    "norad_cat_id": 61784,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2024-11-11T11:29:20.711178Z",
+    "citation": "https://spaceresearch.ssau.ru/en/samsat-ionosfera",
+    "service": "Amateur",
+    "iaru_coordination": "IARU Coordinated",
+    "iaru_coordination_url": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=1002",
+    "itu_notification": {
+      "urls": []
+    },
+    "frequency_violation": false,
+    "unconfirmed": false
+  }
+]
