@@ -69,3 +69,4 @@ lib-cov
 # Vite
 .vite-ssg-dist
 .vite-ssg-temp
+dev-dist
