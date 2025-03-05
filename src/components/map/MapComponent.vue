@@ -14,6 +14,11 @@
           v-model:selected-satellite="selectedSatellite"
           v-model:show-path="showPath"
         />
+        <UpcomingSatellitesControl
+          v-if="!selectedSatellite && homeCoordinates && upcomingVisibleSatellites.length > 0"
+          :upcoming-satellites="upcomingVisibleSatellites"
+          @select-satellite="selectUpcomingSatellite"
+        />
       </div>
     </div>
     <StatusBar
@@ -40,6 +45,7 @@ import { SatelliteFeature, type SatelliteInfo } from './features/SatelliteFeatur
 import { NearestSatellitesFeature } from './features/NearestSatellitesFeature';
 import HomeLocationControl from './controls/HomeLocationControl.vue';
 import SatelliteSelector from './controls/SatelliteSelector.vue';
+import UpcomingSatellitesControl from './controls/UpcomingSatellitesControl.vue';
 import StatusBar from './StatusBar.vue';
 import { loadSetting, saveSetting } from './utils/settings';
 
@@ -55,14 +61,25 @@ const homeCoordinates = ref<HomeLocationCoordinates | null>(null);
 const elevation = ref<number | null>(null);
 const aglHeight = ref<number>(0);
 const selectedSatellite = ref<string>('');
-const satellites = ref<{ name: string; tle: [string, string]; position?: { lat: number; lng: number; height: number }; distance?: number }[]>([]);
+const satellites = ref<{ name: string; tle: [string, string]; position?: { lat: number; lng: number; height: number }; distance?: number; catalogNumber?: string }[]>([]);
 const showPath = ref<boolean>(false);
 const satelliteInfo = ref<SatelliteInfo | null>(null);
 const currentSatelliteFeature = ref<SatelliteFeature | null>(null);
 const nearestSatellitesFeature = ref<NearestSatellitesFeature | null>(null);
+const upcomingVisibleSatellites = ref<{ name: string; tle: [string, string]; visibleAt: Date }[]>([]);
+let upcomingPredictionInterval: number | null = null;
 
 // Features and Layers
 let homeLocationFeature: HomeLocationFeature;
+
+// Extract satellite catalog number from TLE line 1
+function extractCatalogNumber(tleLine1: string): string | undefined {
+  // Catalog number is in positions 3-7 (0-indexed)
+  if (tleLine1.startsWith('1 ') && tleLine1.length >= 8) {
+    return tleLine1.substring(2, 7).trim();
+  }
+  return undefined;
+}
 
 // Load satellites from file
 async function loadSatellites() {
@@ -123,7 +140,7 @@ async function loadSatellites() {
   // Parse the satellite data
   try {
     const lines = satelliteData.split('\n');
-    const satelliteList: { name: string; tle: [string, string]; position?: { lat: number; lng: number; height: number }; distance?: number }[] = [];
+    const satelliteList: { name: string; tle: [string, string]; position?: { lat: number; lng: number; height: number }; distance?: number; catalogNumber?: string }[] = [];
     
     for (let i = 0; i < lines.length; i += 3) {
       if (i + 2 < lines.length) {
@@ -137,15 +154,18 @@ async function loadSatellites() {
             const now = Date.now();
             const position = getLatLngObj(tle, now);
             const satInfo = getSatelliteInfo(tle, now);
+            const catalogNumber = extractCatalogNumber(line1);
             
             satelliteList.push({
               name,
               tle,
-              position: { ...position, height: satInfo.height }
+              position: { ...position, height: satInfo.height },
+              catalogNumber
             });
           } catch (e) {
             console.warn(`Failed to calculate position for satellite ${name}:`, e);
-            satelliteList.push({ name, tle: [line1, line2] });
+            const catalogNumber = extractCatalogNumber(line1);
+            satelliteList.push({ name, tle: [line1, line2], catalogNumber });
           }
         }
       }
@@ -158,14 +178,38 @@ async function loadSatellites() {
     satellites.value = satelliteList;
     console.log(`Loaded ${satelliteList.length} satellites`);
     
-    // Load saved satellite selection after satellites are loaded
-    const savedSatellite = loadSetting<string>('selectedSatellite', '');
-    if (savedSatellite) {
-      const satellite = satelliteList.find(sat => sat.name === savedSatellite);
+    // Check URL parameters for satellite selection
+    const urlParams = new URLSearchParams(window.location.search);
+    const idParam = urlParams.get('id');
+    
+    if (idParam) {
+      // Find satellite by catalog number
+      const satellite = satelliteList.find(sat => sat.catalogNumber === idParam);
       if (satellite) {
-        selectedSatellite.value = savedSatellite;
-        console.log(`Loaded saved satellite selection: ${savedSatellite}`);
-        
+        selectedSatellite.value = satellite.name;
+        console.log(`Selected satellite from URL parameter: ${satellite.name} (ID: ${idParam})`);
+      } else {
+        console.warn(`Satellite with ID ${idParam} not found`);
+      }
+    }
+    
+    // If no satellite selected from URL, try to load saved selection
+    if (!selectedSatellite.value) {
+      const savedSatellite = loadSetting<string>('selectedSatellite', '');
+      if (savedSatellite) {
+        const satellite = satelliteList.find(sat => sat.name === savedSatellite);
+        if (satellite) {
+          selectedSatellite.value = savedSatellite;
+          console.log(`Loaded saved satellite selection: ${savedSatellite}`);
+        }
+      }
+    }
+    
+    // Initialize satellite feature if a satellite is selected
+    if (selectedSatellite.value) {
+      const satellite = satelliteList.find(sat => sat.name === selectedSatellite.value);
+      
+      if (satellite) {
         // Initialize the satellite feature
         currentSatelliteFeature.value = new SatelliteFeature(
           satellite.name,
@@ -234,6 +278,10 @@ async function loadSatellites() {
 
       nearestSatellitesFeature.value.updateSatellites(nearestSats);
       nearestSatellitesFeature.value.startTracking();
+      
+      // Predict upcoming visible satellites
+      upcomingVisibleSatellites.value = predictUpcomingVisibleSatellites();
+      console.log(`Predicted ${upcomingVisibleSatellites.value.length} upcoming visible satellites`);
 
       // Calculate the extent to include home and all nearest satellites
       if (mapInstance.value && nearestSats.length > 0) {
@@ -424,6 +472,181 @@ function updateAglHeight(height: number) {
   }
 }
 
+// Predict the next satellites that will become visible in the next 24 hours
+function predictUpcomingVisibleSatellites() {
+  if (!homeCoordinates.value || elevation.value === null || !satellites.value.length) {
+    return [];
+  }
+
+  const observerOptions = {
+    latitude: homeCoordinates.value.lat,
+    longitude: homeCoordinates.value.lon,
+    elevation: elevation.value + aglHeight.value,
+    minElevation: 0 // Visible above horizon
+  };
+
+  const now = new Date();
+  const endTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+  const predictions: { name: string; tle: [string, string]; visibleAt: Date }[] = [];
+  
+  // Get currently visible satellites to exclude them
+  const currentlyVisible = satellites.value.filter(sat => {
+    if (!sat.position) return false;
+    
+    const info = calculateSatelliteInfo(
+      homeCoordinates.value!.lat,
+      homeCoordinates.value!.lon,
+      elevation.value! + aglHeight.value,
+      sat.position.lat,
+      sat.position.lng,
+      sat.position.height
+    );
+    
+    return info.elevationAngle > 0;
+  }).map(sat => sat.name);
+  
+  console.log(`Currently visible satellites: ${currentlyVisible.length}`);
+  
+  // Check each satellite for upcoming visibility
+  // We'll check more satellites to find the ones that will be visible soonest
+  const maxSatellitesToCheck = 100; // Increase from 50 to 100 for better coverage
+  let checkedCount = 0;
+  
+  for (const satellite of satellites.value) {
+    // Skip if already visible
+    if (currentlyVisible.includes(satellite.name)) {
+      continue;
+    }
+    
+    try {
+      // Check visibility at multiple time points to find the next pass
+      const nextVisibleTime = findNextVisibilityWindow(
+        satellite.tle,
+        now,
+        endTime,
+        observerOptions
+      );
+      
+      if (nextVisibleTime) {
+        predictions.push({
+          name: satellite.name,
+          tle: satellite.tle,
+          visibleAt: nextVisibleTime
+        });
+      }
+    } catch (e) {
+      console.warn(`Failed to predict visibility for satellite ${satellite.name}:`, e);
+    }
+    
+    // Limit how many satellites we check to avoid performance issues
+    checkedCount++;
+    if (checkedCount >= maxSatellitesToCheck) {
+      break;
+    }
+  }
+  
+  // Sort by visibility time
+  predictions.sort((a, b) => a.visibleAt.getTime() - b.visibleAt.getTime());
+  
+  // Take only the first 5 (soonest to become visible)
+  return predictions.slice(0, 5);
+}
+
+// Find the next time a satellite becomes visible by checking multiple time points
+function findNextVisibilityWindow(
+  tle: [string, string],
+  startTime: Date,
+  endTime: Date,
+  observerOptions: { latitude: number; longitude: number; elevation: number; minElevation: number }
+): Date | null {
+  // Check if satellite is already visible at start time
+  const startVisible = isSatelliteVisibleAt(tle, startTime, observerOptions);
+  if (startVisible) {
+    return startTime;
+  }
+  
+  // Sample multiple time points to find visibility windows
+  const timeRange = endTime.getTime() - startTime.getTime();
+  const numSamples = 144; // Check every 10 minutes for 24 hours
+  const sampleInterval = timeRange / numSamples;
+  
+  let lastVisibility = false;
+  
+  // First pass: find approximate visibility windows
+  for (let i = 0; i < numSamples; i++) {
+    const sampleTime = new Date(startTime.getTime() + i * sampleInterval);
+    const isVisible = isSatelliteVisibleAt(tle, sampleTime, observerOptions);
+    
+    // If we detect a transition from not visible to visible, we found a rising edge
+    if (!lastVisibility && isVisible) {
+      // Now use binary search to find the exact time
+      return findVisibilityTimeExact(
+        tle,
+        new Date(sampleTime.getTime() - sampleInterval), // Previous sample
+        sampleTime,
+        observerOptions
+      );
+    }
+    
+    lastVisibility = isVisible;
+  }
+  
+  return null; // No visibility window found
+}
+
+// Binary search to find the exact time when a satellite becomes visible
+function findVisibilityTimeExact(
+  tle: [string, string],
+  startTime: Date,
+  endTime: Date,
+  observerOptions: { latitude: number; longitude: number; elevation: number; minElevation: number }
+): Date | null {
+  // Binary search to find the time when satellite becomes visible
+  let low = startTime.getTime();
+  let high = endTime.getTime();
+  
+  // Stop when we're within 1 minute of precision
+  while (high - low > 60 * 1000) {
+    const mid = Math.floor((low + high) / 2);
+    const midTime = new Date(mid);
+    
+    if (isSatelliteVisibleAt(tle, midTime, observerOptions)) {
+      high = mid; // If visible at mid, look for earlier time
+    } else {
+      low = mid; // If not visible at mid, look for later time
+    }
+  }
+  
+  // At this point, 'low' is the last time it was not visible
+  // and 'high' is the first time it was visible (within 1 min precision)
+  return new Date(high);
+}
+
+// Helper function to check if a satellite is visible at a specific time
+function isSatelliteVisibleAt(
+  tle: [string, string],
+  time: Date,
+  observerOptions: { latitude: number; longitude: number; elevation: number; minElevation: number }
+): boolean {
+  try {
+    const satPosition = getLatLngObj(tle, time.getTime());
+    const satInfo = getSatelliteInfo(tle, time.getTime());
+    
+    const info = calculateSatelliteInfo(
+      observerOptions.latitude,
+      observerOptions.longitude,
+      observerOptions.elevation,
+      satPosition.lat,
+      satPosition.lng,
+      satInfo.height
+    );
+    
+    return info.elevationAngle > observerOptions.minElevation;
+  } catch (e) {
+    return false;
+  }
+}
+
 // Watch for changes in home coordinates
 watch(homeCoordinates, async (newCoords) => {
   if (!newCoords) return;
@@ -453,6 +676,10 @@ watch(homeCoordinates, async (newCoords) => {
 
       nearestSatellitesFeature.value.updateSatellites(nearestSats);
       nearestSatellitesFeature.value.startTracking();
+      
+      // Predict upcoming visible satellites
+      upcomingVisibleSatellites.value = predictUpcomingVisibleSatellites();
+      console.log(`Predicted ${upcomingVisibleSatellites.value.length} upcoming visible satellites`);
 
       // Calculate the extent to include home and all nearest satellites
       if (mapInstance.value && nearestSats.length > 0) {
@@ -501,6 +728,22 @@ watch(selectedSatellite, (newSatellite) => {
 
   // Save selection state (including empty string for no selection)
   saveSetting('selectedSatellite', newSatellite);
+
+  // Update URL with satellite ID if selected
+  if (newSatellite) {
+    const satellite = satellites.value.find(sat => sat.name === newSatellite);
+    if (satellite && satellite.catalogNumber) {
+      // Update URL without reloading the page
+      const url = new URL(window.location.href);
+      url.searchParams.set('id', satellite.catalogNumber);
+      window.history.replaceState({}, '', url.toString());
+    }
+  } else {
+    // Remove id parameter from URL when no satellite is selected
+    const url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    window.history.replaceState({}, '', url.toString());
+  }
 
   // First, clean up the old satellite and its features
   if (currentSatelliteFeature.value) {
@@ -587,6 +830,10 @@ watch(selectedSatellite, (newSatellite) => {
 
       nearestSatellitesFeature.value.updateSatellites(nearestSats);
       nearestSatellitesFeature.value.startTracking();
+      
+      // Predict upcoming visible satellites
+      upcomingVisibleSatellites.value = predictUpcomingVisibleSatellites();
+      console.log(`Predicted ${upcomingVisibleSatellites.value.length} upcoming visible satellites`);
 
       // Calculate the extent to include home and all nearest satellites
       if (mapInstance.value && nearestSats.length > 0) {
@@ -635,6 +882,11 @@ watch(showPath, (newValue) => {
     currentSatelliteFeature.value.setShowPath(newValue);
   }
 });
+
+// Function to handle selection of an upcoming satellite
+function selectUpcomingSatellite(name: string) {
+  selectedSatellite.value = name;
+}
 
 // Initialize map on component mount
 onMounted(() => {
@@ -689,6 +941,13 @@ onMounted(() => {
   
   // Load satellites after map initialization
   loadSatellites();
+  
+  // Set up periodic updates for upcoming satellite predictions
+  upcomingPredictionInterval = window.setInterval(() => {
+    if (!selectedSatellite.value && homeCoordinates.value && satellites.value.length > 0) {
+      upcomingVisibleSatellites.value = predictUpcomingVisibleSatellites();
+    }
+  }, 60000); // Update every minute
 });
 
 // Clean up on component unmount
@@ -698,6 +957,9 @@ onUnmounted(() => {
   }
   if (nearestSatellitesFeature.value) {
     nearestSatellitesFeature.value.stopTracking();
+  }
+  if (upcomingPredictionInterval !== null) {
+    window.clearInterval(upcomingPredictionInterval);
   }
 });
 </script>
