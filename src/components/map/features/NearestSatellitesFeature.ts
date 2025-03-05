@@ -6,6 +6,7 @@ import VectorSource from 'ol/source/Vector';
 import { getLatLngObj } from 'tle.js';
 // @ts-ignore
 import satelliteIcon from '@/assets/satellite.svg';
+import Map from 'ol/Map';
 
 export interface NearestSatellite {
   name: string;
@@ -18,9 +19,36 @@ export class NearestSatellitesFeature {
   private vectorSource: VectorSource;
   private updateInterval: number | null = null;
   private satellites: NearestSatellite[] = [];
+  private map: Map | null = null;
+  private onSatelliteClick: ((name: string) => void) | null = null;
 
   constructor(vectorSource: VectorSource) {
     this.vectorSource = vectorSource;
+  }
+
+  public setMap(map: Map) {
+    this.map = map;
+    this.setupClickHandler();
+  }
+
+  public setClickHandler(handler: (name: string) => void) {
+    this.onSatelliteClick = handler;
+  }
+
+  private setupClickHandler() {
+    if (!this.map) return;
+
+    this.map.on('click', (event) => {
+      if (!this.onSatelliteClick) return;
+
+      const feature = this.map!.forEachFeatureAtPixel(event.pixel, (feature) => feature);
+      if (feature && this.features.includes(feature as Feature)) {
+        const name = (feature as Feature).get('satelliteName');
+        if (name) {
+          this.onSatelliteClick(name);
+        }
+      }
+    });
   }
 
   public updateSatellites(nearestSatellites: NearestSatellite[]) {
@@ -41,7 +69,8 @@ export class NearestSatellitesFeature {
       const point = fromLonLat([position.lng, position.lat]);
       
       const feature = new Feature({
-        geometry: new Point(point)
+        geometry: new Point(point),
+        satelliteName: satellite.name
       });
 
       const distanceText = satellite.distance 
