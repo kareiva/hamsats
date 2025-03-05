@@ -51,4 +51,15 @@ To manually update the transponder data:
 npm run fetch-transponders
 ```
 
-This will fetch the latest transmitter data for all satellites in the `amateur.txt` file. 
+This will fetch the latest transmitter data for all satellites in the `amateur.txt` file.
+
+## URL Parameters
+
+The application supports URL parameters for sharing specific views and improving SEO:
+
+### Satellite Selection
+
+- `id`: The NORAD catalog number of the satellite to track
+  - Example: `https://www.hamsats.com/?id=25544` (tracks the ISS)
+
+These URL parameters make it easy to share specific satellite tracking configurations and improve SEO by creating unique URLs for each satellite. 
