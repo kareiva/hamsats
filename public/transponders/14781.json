@@ -1,0 +1,33 @@
+[
+  {
+    "uuid": "aBPWui23BqUhVc62nySNuQ",
+    "description": "1k2 AFSK TLM",
+    "alive": true,
+    "type": "Transmitter",
+    "uplink_low": null,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 145825000,
+    "downlink_high": null,
+    "downlink_drift": null,
+    "mode": "AFSK",
+    "mode_id": 49,
+    "uplink_mode": null,
+    "invert": false,
+    "baud": 1200,
+    "sat_id": "TDVY-5283-4801-7631-6209",
+    "norad_cat_id": 14781,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2019-06-15T10:55:45.933902Z",
+    "citation": "https://www.amsat.org/beaconclosed-satellites/uosat-2-uo-11/",
+    "service": "Unknown",
+    "iaru_coordination": "N/A",
+    "iaru_coordination_url": "",
+    "itu_notification": {
+      "urls": []
+    },
+    "frequency_violation": false,
+    "unconfirmed": false
+  }
+]

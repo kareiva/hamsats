@@ -1,0 +1,33 @@
+[
+  {
+    "uuid": "8tTQhDacA2WdGVHkNhShfC",
+    "description": "Mode U - GMSK2k4 USP",
+    "alive": true,
+    "type": "Transmitter",
+    "uplink_low": null,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 401030000,
+    "downlink_high": null,
+    "downlink_drift": null,
+    "mode": "GMSK USP",
+    "mode_id": 91,
+    "uplink_mode": null,
+    "invert": false,
+    "baud": 2400,
+    "sat_id": "WQFZ-2668-6663-7878-5978",
+    "norad_cat_id": 61764,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2024-10-31T11:22:10.683734Z",
+    "citation": "Satellite Team",
+    "service": "Unknown",
+    "iaru_coordination": "N/A",
+    "iaru_coordination_url": "",
+    "itu_notification": {
+      "urls": []
+    },
+    "frequency_violation": false,
+    "unconfirmed": false
+  }
+]

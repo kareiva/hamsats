@@ -1,0 +1,167 @@
+[
+  {
+    "uuid": "KK2ZKWx59ArGiPuhxUs9aC",
+    "description": "Mode V - CW",
+    "alive": true,
+    "type": "Transmitter",
+    "uplink_low": null,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 145840000,
+    "downlink_high": null,
+    "downlink_drift": null,
+    "mode": "CW",
+    "mode_id": 6,
+    "uplink_mode": null,
+    "invert": false,
+    "baud": null,
+    "sat_id": "PBTZ-3525-0189-2410-5216",
+    "norad_cat_id": 59112,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2024-02-21T16:28:32.643045Z",
+    "citation": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=876 https://gitlab.com/librespacefoundation/satnogs-ops/-/issues/272 and https://www.informatik.uni-wuerzburg.de/en/aerospaceinfo/mitarbeiter/kayal/forschungsprojekte/sonate-2/information-for-radio-amateurs/",
+    "service": "Amateur",
+    "iaru_coordination": "IARU Coordinated",
+    "iaru_coordination_url": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=876",
+    "itu_notification": {
+      "urls": [
+        "https://www.itu.int/online/snl/satbandold_snl.sh?ntc_id=122545190"
+      ]
+    },
+    "frequency_violation": false,
+    "unconfirmed": false
+  },
+  {
+    "uuid": "Fo5WYJpLBKNyNQyqiuNXnw",
+    "description": "Mode U - GMSK9k6 - AX.25 G3RUH - Telemetry",
+    "alive": true,
+    "type": "Transmitter",
+    "uplink_low": null,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 437025000,
+    "downlink_high": null,
+    "downlink_drift": null,
+    "mode": "GMSK",
+    "mode_id": 63,
+    "uplink_mode": null,
+    "invert": false,
+    "baud": 9600,
+    "sat_id": "PBTZ-3525-0189-2410-5216",
+    "norad_cat_id": 59112,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2024-02-21T16:28:45.041678Z",
+    "citation": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=876 https://gitlab.com/librespacefoundation/satnogs-ops/-/issues/272 and https://www.informatik.uni-wuerzburg.de/en/aerospaceinfo/mitarbeiter/kayal/forschungsprojekte/sonate-2/information-for-radio-amateurs/",
+    "service": "Amateur",
+    "iaru_coordination": "IARU Coordinated",
+    "iaru_coordination_url": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=876",
+    "itu_notification": {
+      "urls": [
+        "https://www.itu.int/online/snl/satbandold_snl.sh?ntc_id=122545190"
+      ]
+    },
+    "frequency_violation": false,
+    "unconfirmed": false
+  },
+  {
+    "uuid": "Z4sobeTCrUzsnur45AiJVK",
+    "description": "Mode V - SSTV - Martin M1 SSTV",
+    "alive": true,
+    "type": "Transmitter",
+    "uplink_low": null,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 145880000,
+    "downlink_high": null,
+    "downlink_drift": null,
+    "mode": "SSTV",
+    "mode_id": 5,
+    "uplink_mode": null,
+    "invert": false,
+    "baud": null,
+    "sat_id": "PBTZ-3525-0189-2410-5216",
+    "norad_cat_id": 59112,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2024-03-08T15:19:39.514266Z",
+    "citation": "https://www.informatik.uni-wuerzburg.de/en/aerospaceinfo/staff/kayal/research-activities/sonate-2/",
+    "service": "Amateur",
+    "iaru_coordination": "IARU Coordinated",
+    "iaru_coordination_url": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=876",
+    "itu_notification": {
+      "urls": [
+        "https://www.itu.int/online/snl/satbandold_snl.sh?ntc_id=122545190"
+      ]
+    },
+    "frequency_violation": false,
+    "unconfirmed": false
+  },
+  {
+    "uuid": "HaaJeCRRdYWsknWChvL8tZ",
+    "description": "Mode V/V - APRS digipeater",
+    "alive": true,
+    "type": "Transceiver",
+    "uplink_low": 145825000,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 145825000,
+    "downlink_high": null,
+    "downlink_drift": null,
+    "mode": "AFSK",
+    "mode_id": 49,
+    "uplink_mode": "AFSK",
+    "invert": false,
+    "baud": 1200,
+    "sat_id": "PBTZ-3525-0189-2410-5216",
+    "norad_cat_id": 59112,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2024-07-26T16:08:37.375133Z",
+    "citation": "https://www.informatik.uni-wuerzburg.de/aerospaceinfo/mitarbeiter/kayal/forschungsprojekte/sonate-2/information-for-radio-amateurs/#c1137755",
+    "service": "Amateur",
+    "iaru_coordination": "IARU Coordinated",
+    "iaru_coordination_url": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=876",
+    "itu_notification": {
+      "urls": [
+        "https://www.itu.int/online/snl/satbandold_snl.sh?ntc_id=122545190"
+      ]
+    },
+    "frequency_violation": false,
+    "unconfirmed": false
+  },
+  {
+    "uuid": "h7RJftakVQgnzNymS4XaSc",
+    "description": "Mode S - QPSK 2.048 Msps - CCSDS 131.0-B Convolutional code k=7, r=0.5, randomizer on",
+    "alive": true,
+    "type": "Transmitter",
+    "uplink_low": null,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 2267700000,
+    "downlink_high": null,
+    "downlink_drift": null,
+    "mode": "QPSK",
+    "mode_id": 69,
+    "uplink_mode": null,
+    "invert": false,
+    "baud": 2048000,
+    "sat_id": "PBTZ-3525-0189-2410-5216",
+    "norad_cat_id": 59112,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2024-07-26T17:24:55.695813Z",
+    "citation": "https://network.satnogs.org/observations/9934821/",
+    "service": "Unknown",
+    "iaru_coordination": "N/A",
+    "iaru_coordination_url": "",
+    "itu_notification": {
+      "urls": [
+        "https://www.itu.int/online/snl/satbandold_snl.sh?ntc_id=122545190"
+      ]
+    },
+    "frequency_violation": false,
+    "unconfirmed": false
+  }
+]

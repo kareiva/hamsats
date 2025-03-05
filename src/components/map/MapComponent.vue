@@ -14,6 +14,10 @@
           v-model:selected-satellite="selectedSatellite"
           v-model:show-path="showPath"
         />
+        <TransmitterInfoControl
+          v-if="selectedSatellite && selectedSatelliteCatalogNumber"
+          :catalog-number="selectedSatelliteCatalogNumber"
+        />
         <UpcomingSatellitesControl
           v-if="!selectedSatellite && homeCoordinates && upcomingVisibleSatellites.length > 0"
           :upcoming-satellites="upcomingVisibleSatellites"
@@ -32,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch, onUnmounted } from 'vue';
+import { onMounted, ref, watch, onUnmounted, computed } from 'vue';
 import type { Map as OlMap } from 'ol';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { Translate } from 'ol/interaction';
@@ -46,6 +50,7 @@ import { NearestSatellitesFeature } from './features/NearestSatellitesFeature';
 import HomeLocationControl from './controls/HomeLocationControl.vue';
 import SatelliteSelector from './controls/SatelliteSelector.vue';
 import UpcomingSatellitesControl from './controls/UpcomingSatellitesControl.vue';
+import TransmitterInfoControl from './controls/TransmitterInfoControl.vue';
 import StatusBar from './StatusBar.vue';
 import { loadSetting, saveSetting } from './utils/settings';
 
@@ -71,6 +76,13 @@ let upcomingPredictionInterval: number | null = null;
 
 // Features and Layers
 let homeLocationFeature: HomeLocationFeature;
+
+// Computed property to get the catalog number of the selected satellite
+const selectedSatelliteCatalogNumber = computed(() => {
+  if (!selectedSatellite.value) return undefined;
+  const satellite = satellites.value.find(sat => sat.name === selectedSatellite.value);
+  return satellite?.catalogNumber;
+});
 
 // Extract satellite catalog number from TLE line 1
 function extractCatalogNumber(tleLine1: string): string | undefined {

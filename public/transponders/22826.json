@@ -1,0 +1,33 @@
+[
+  {
+    "uuid": "EqJ7V2tkuFDPF4YqKGRxvg",
+    "description": "BPSK CW carrier",
+    "alive": true,
+    "type": "Transmitter",
+    "uplink_low": null,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 435772000,
+    "downlink_high": null,
+    "downlink_drift": null,
+    "mode": "BPSK",
+    "mode_id": 50,
+    "uplink_mode": null,
+    "invert": false,
+    "baud": 1200,
+    "sat_id": "NRSU-5773-9133-8545-6426",
+    "norad_cat_id": 22826,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2024-04-08T10:47:38.142180Z",
+    "citation": "I2KBD Command Station",
+    "service": "Unknown",
+    "iaru_coordination": "N/A",
+    "iaru_coordination_url": "",
+    "itu_notification": {
+      "urls": []
+    },
+    "frequency_violation": false,
+    "unconfirmed": false
+  }
+]

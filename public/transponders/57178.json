@@ -1,0 +1,33 @@
+[
+  {
+    "uuid": "K6pMj8h9wdzEE9cm3WXauo",
+    "description": "Mode U - GMSK 4k8 (USP FEC) TLM",
+    "alive": true,
+    "type": "Transmitter",
+    "uplink_low": null,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 436570000,
+    "downlink_high": null,
+    "downlink_drift": null,
+    "mode": "GMSK USP",
+    "mode_id": 91,
+    "uplink_mode": null,
+    "invert": false,
+    "baud": 4800,
+    "sat_id": "UMPN-9044-0154-0093-6402",
+    "norad_cat_id": 57178,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2023-06-01T14:48:58.579669Z",
+    "citation": "https://spacepi.space/wiki/article/cube-sx-hse-3/",
+    "service": "Unknown",
+    "iaru_coordination": "IARU Uncoordinated",
+    "iaru_coordination_url": "",
+    "itu_notification": {
+      "urls": []
+    },
+    "frequency_violation": true,
+    "unconfirmed": false
+  }
+]
