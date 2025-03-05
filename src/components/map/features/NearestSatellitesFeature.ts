@@ -12,6 +12,7 @@ export interface NearestSatellite {
   name: string;
   tle: [string, string];
   distance?: number;
+  visibleAt?: Date; // Time when satellite will become visible
 }
 
 export class NearestSatellitesFeature {
