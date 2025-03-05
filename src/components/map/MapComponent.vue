@@ -675,6 +675,13 @@ onMounted(() => {
       homeCoordinates.value = coordinates;
     }
   });
+
+  // Initialize nearest satellites feature with click handler
+  nearestSatellitesFeature.value = new NearestSatellitesFeature(mapLayers.vectorSource);
+  nearestSatellitesFeature.value.setMap(mapInstance.value);
+  nearestSatellitesFeature.value.setClickHandler((name: string) => {
+    selectedSatellite.value = name;
+  });
   
   // First try to load saved location
   const savedLocation = loadSetting<HomeLocationCoordinates | null>('homeLocation', null);

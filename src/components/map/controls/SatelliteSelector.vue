@@ -12,6 +12,12 @@
         @keydown.up.prevent="navigateResults(-1)"
         @keydown.enter.prevent="selectHighlighted"
       />
+      <button 
+        v-if="selectedSatellite" 
+        class="clear-button"
+        @click="clearSelection"
+        title="Clear selection"
+      >×</button>
       <div class="autocomplete-list" v-if="showAutocomplete && filteredSatellites.length > 0">
         <div
           v-for="(sat, index) in filteredSatellites"
@@ -111,6 +117,13 @@ function onSearchInput() {
   highlightedIndex.value = -1;
 }
 
+function clearSelection() {
+  emit('update:selectedSatellite', '');
+  searchQuery.value = '';
+  showAutocomplete.value = false;
+  highlightedIndex.value = -1;
+}
+
 // Close autocomplete when clicking outside
 window.addEventListener('click', (e: MouseEvent) => {
   const target = e.target as HTMLElement;
@@ -157,6 +170,7 @@ watch(filteredSatellites, () => {
     .search-input {
       width: 100%;
       padding: 8px;
+      padding-right: 30px;
       border-radius: 4px;
       border: 1px solid #ccc;
       background-color: white;
@@ -167,6 +181,24 @@ watch(filteredSatellites, () => {
         outline: none;
         border-color: rgba(0, 60, 136, 0.7);
         box-shadow: 0 0 0 2px rgba(0, 60, 136, 0.3);
+      }
+    }
+
+    .clear-button {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 18px;
+      line-height: 1;
+      padding: 0 5px;
+      cursor: pointer;
+      
+      &:hover {
+        color: #333;
       }
     }
     
