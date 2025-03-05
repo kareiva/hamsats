@@ -28,12 +28,12 @@
 
 <script setup lang="ts">
 import { onMounted, ref, watch, onUnmounted } from 'vue';
-import Map from 'ol/Map';
+import type { Map as OlMap } from 'ol';
 import { fromLonLat, toLonLat } from 'ol/proj';
-import Translate from 'ol/interaction/Translate';
+import { Translate } from 'ol/interaction';
 import { getLatLngObj, getSatelliteInfo } from 'tle.js';
 import Cookies from 'js-cookie';
-import { createMapLayers, initializeMap } from './utils/mapSetup';
+import { createMapLayers, initializeMap, type MapLayers } from './utils/mapSetup';
 import { calculateSatelliteInfo } from './utils/calculations';
 import { HomeLocationFeature, type HomeLocationCoordinates } from './features/HomeLocation';
 import { SatelliteFeature, type SatelliteInfo } from './features/SatelliteFeature';
@@ -41,32 +41,16 @@ import { NearestSatellitesFeature } from './features/NearestSatellitesFeature';
 import HomeLocationControl from './controls/HomeLocationControl.vue';
 import SatelliteSelector from './controls/SatelliteSelector.vue';
 import StatusBar from './StatusBar.vue';
-
-// Add cookie utility functions at the top of the script
-const COOKIE_EXPIRY = 30; // days
-const SETTINGS_PREFIX = 'satgazer_';
-
-function saveSetting(key: string, value: any) {
-  Cookies.set(SETTINGS_PREFIX + key, JSON.stringify(value), { expires: COOKIE_EXPIRY });
-}
-
-function loadSetting<T>(key: string, defaultValue: T): T {
-  const value = Cookies.get(SETTINGS_PREFIX + key);
-  if (value === undefined) return defaultValue;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return defaultValue;
-  }
-}
+import { loadSetting, saveSetting } from './utils/settings';
 
 // Add this near the top of the script section, with other cookie utilities
-const SATELLITE_DATA_COOKIE = SETTINGS_PREFIX + 'amateur_txt';
-const SATELLITE_DATA_TIMESTAMP_COOKIE = SETTINGS_PREFIX + 'amateur_txt_timestamp';
+const SATELLITE_DATA_COOKIE = 'satgazer_amateur_txt';
+const SATELLITE_DATA_TIMESTAMP_COOKIE = 'satgazer_amateur_txt_timestamp';
 const SATELLITE_DATA_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 // State
-const mapInstance = ref<Map | null>(null);
+let mapLayers: MapLayers;
+const mapInstance = ref<OlMap>();
 const homeCoordinates = ref<HomeLocationCoordinates | null>(null);
 const elevation = ref<number | null>(null);
 const aglHeight = ref<number>(0);
@@ -79,7 +63,6 @@ const nearestSatellitesFeature = ref<NearestSatellitesFeature | null>(null);
 
 // Features and Layers
 let homeLocationFeature: HomeLocationFeature;
-let mapLayers: ReturnType<typeof createMapLayers>;
 
 // Load satellites from file
 async function loadSatellites() {
@@ -396,7 +379,8 @@ function toggleHomeLocation() {
     }
     
     // Clear cookie
-    Cookies.remove(SETTINGS_PREFIX + 'homeLocation');
+    Cookies.remove(SATELLITE_DATA_COOKIE);
+    Cookies.remove(SATELLITE_DATA_TIMESTAMP_COOKIE);
     
     // Clear satellite selection and distances
     selectedSatellite.value = '';
