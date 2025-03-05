@@ -1,9 +1,11 @@
 <template>
+  <HeaderBar />
   <RouterView />
 </template>
 
 <script setup lang="ts">
 import { RouterView } from 'vue-router';
+import HeaderBar from '@/components/map/HeaderBar.vue';
 </script>
 
 <style>

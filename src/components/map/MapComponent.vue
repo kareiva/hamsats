@@ -512,6 +512,9 @@ watch(homeCoordinates, async (newCoords) => {
 
 // Watch for changes in selectedSatellite
 watch(selectedSatellite, (newSatellite) => {
+  // Update page title
+  document.title = newSatellite ? `Tracking ${newSatellite}` : 'HamSats by LY2EN';
+
   // Save selection state (including empty string for no selection)
   saveSetting('selectedSatellite', newSatellite);
 
@@ -712,8 +715,9 @@ onUnmounted(() => {
 .container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: calc(100vh - 32px);
   width: 100%;
+  position: relative;
 }
 
 .map-container {
