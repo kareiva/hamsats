@@ -6,7 +6,7 @@ import VectorSource from 'ol/source/Vector';
 import { getLatLngObj } from 'tle.js';
 // @ts-ignore
 import satelliteIcon from '@/assets/satellite.svg';
-import Map from 'ol/Map';
+import type { Map as OlMap } from 'ol';
 
 export interface NearestSatellite {
   name: string;
@@ -19,14 +19,14 @@ export class NearestSatellitesFeature {
   private vectorSource: VectorSource;
   private updateInterval: number | null = null;
   private satellites: NearestSatellite[] = [];
-  private map: Map | null = null;
+  private map: OlMap | null = null;
   private onSatelliteClick: ((name: string) => void) | null = null;
 
   constructor(vectorSource: VectorSource) {
     this.vectorSource = vectorSource;
   }
 
-  public setMap(map: Map) {
+  public setMap(map: OlMap) {
     this.map = map;
     this.setupClickHandler();
   }
