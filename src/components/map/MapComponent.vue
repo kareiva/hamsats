@@ -55,7 +55,7 @@ const homeCoordinates = ref<HomeLocationCoordinates | null>(null);
 const elevation = ref<number | null>(null);
 const aglHeight = ref<number>(0);
 const selectedSatellite = ref<string>('');
-const satellites = ref<{ name: string; tle: [string, string]; position?: { lat: number; lng: number; height: number }; distance?: number }[]>([]);
+const satellites = ref<{ name: string; tle: [string, string]; position?: { lat: number; lng: number; height: number }; distance?: number; catalogNumber?: string }[]>([]);
 const showPath = ref<boolean>(false);
 const satelliteInfo = ref<SatelliteInfo | null>(null);
 const currentSatelliteFeature = ref<SatelliteFeature | null>(null);
@@ -63,6 +63,15 @@ const nearestSatellitesFeature = ref<NearestSatellitesFeature | null>(null);
 
 // Features and Layers
 let homeLocationFeature: HomeLocationFeature;
+
+// Extract satellite catalog number from TLE line 1
+function extractCatalogNumber(tleLine1: string): string | undefined {
+  // Catalog number is in positions 3-7 (0-indexed)
+  if (tleLine1.startsWith('1 ') && tleLine1.length >= 8) {
+    return tleLine1.substring(2, 7).trim();
+  }
+  return undefined;
+}
 
 // Load satellites from file
 async function loadSatellites() {
@@ -123,7 +132,7 @@ async function loadSatellites() {
   // Parse the satellite data
   try {
     const lines = satelliteData.split('\n');
-    const satelliteList: { name: string; tle: [string, string]; position?: { lat: number; lng: number; height: number }; distance?: number }[] = [];
+    const satelliteList: { name: string; tle: [string, string]; position?: { lat: number; lng: number; height: number }; distance?: number; catalogNumber?: string }[] = [];
     
     for (let i = 0; i < lines.length; i += 3) {
       if (i + 2 < lines.length) {
@@ -137,15 +146,18 @@ async function loadSatellites() {
             const now = Date.now();
             const position = getLatLngObj(tle, now);
             const satInfo = getSatelliteInfo(tle, now);
+            const catalogNumber = extractCatalogNumber(line1);
             
             satelliteList.push({
               name,
               tle,
-              position: { ...position, height: satInfo.height }
+              position: { ...position, height: satInfo.height },
+              catalogNumber
             });
           } catch (e) {
             console.warn(`Failed to calculate position for satellite ${name}:`, e);
-            satelliteList.push({ name, tle: [line1, line2] });
+            const catalogNumber = extractCatalogNumber(line1);
+            satelliteList.push({ name, tle: [line1, line2], catalogNumber });
           }
         }
       }
@@ -158,14 +170,38 @@ async function loadSatellites() {
     satellites.value = satelliteList;
     console.log(`Loaded ${satelliteList.length} satellites`);
     
-    // Load saved satellite selection after satellites are loaded
-    const savedSatellite = loadSetting<string>('selectedSatellite', '');
-    if (savedSatellite) {
-      const satellite = satelliteList.find(sat => sat.name === savedSatellite);
+    // Check URL parameters for satellite selection
+    const urlParams = new URLSearchParams(window.location.search);
+    const idParam = urlParams.get('id');
+    
+    if (idParam) {
+      // Find satellite by catalog number
+      const satellite = satelliteList.find(sat => sat.catalogNumber === idParam);
       if (satellite) {
-        selectedSatellite.value = savedSatellite;
-        console.log(`Loaded saved satellite selection: ${savedSatellite}`);
-        
+        selectedSatellite.value = satellite.name;
+        console.log(`Selected satellite from URL parameter: ${satellite.name} (ID: ${idParam})`);
+      } else {
+        console.warn(`Satellite with ID ${idParam} not found`);
+      }
+    }
+    
+    // If no satellite selected from URL, try to load saved selection
+    if (!selectedSatellite.value) {
+      const savedSatellite = loadSetting<string>('selectedSatellite', '');
+      if (savedSatellite) {
+        const satellite = satelliteList.find(sat => sat.name === savedSatellite);
+        if (satellite) {
+          selectedSatellite.value = savedSatellite;
+          console.log(`Loaded saved satellite selection: ${savedSatellite}`);
+        }
+      }
+    }
+    
+    // Initialize satellite feature if a satellite is selected
+    if (selectedSatellite.value) {
+      const satellite = satelliteList.find(sat => sat.name === selectedSatellite.value);
+      
+      if (satellite) {
         // Initialize the satellite feature
         currentSatelliteFeature.value = new SatelliteFeature(
           satellite.name,
@@ -501,6 +537,22 @@ watch(selectedSatellite, (newSatellite) => {
 
   // Save selection state (including empty string for no selection)
   saveSetting('selectedSatellite', newSatellite);
+
+  // Update URL with satellite ID if selected
+  if (newSatellite) {
+    const satellite = satellites.value.find(sat => sat.name === newSatellite);
+    if (satellite && satellite.catalogNumber) {
+      // Update URL without reloading the page
+      const url = new URL(window.location.href);
+      url.searchParams.set('id', satellite.catalogNumber);
+      window.history.replaceState({}, '', url.toString());
+    }
+  } else {
+    // Remove id parameter from URL when no satellite is selected
+    const url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    window.history.replaceState({}, '', url.toString());
+  }
 
   // First, clean up the old satellite and its features
   if (currentSatelliteFeature.value) {
