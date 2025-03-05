@@ -1,5 +1,9 @@
 <template>
   <div class="container">
+    <MetaTags 
+      :satellite-name="selectedSatellite"
+      :home-location="homeCoordinates"
+    />
     <div id="map" class="map-container">
       <div class="custom-controls top-right">
         <HomeLocationControl
@@ -22,6 +26,11 @@
           v-if="!selectedSatellite && homeCoordinates && upcomingVisibleSatellites.length > 0"
           :upcoming-satellites="upcomingVisibleSatellites"
           @select-satellite="selectUpcomingSatellite"
+        />
+        <SocialShareControl
+          :satellite-name="selectedSatellite"
+          :satellite-id="selectedSatelliteCatalogNumber || undefined"
+          :home-location="homeCoordinates"
         />
       </div>
     </div>
@@ -51,7 +60,9 @@ import HomeLocationControl from './controls/HomeLocationControl.vue';
 import SatelliteSelector from './controls/SatelliteSelector.vue';
 import UpcomingSatellitesControl from './controls/UpcomingSatellitesControl.vue';
 import TransmitterInfoControl from './controls/TransmitterInfoControl.vue';
+import SocialShareControl from './controls/SocialShareControl.vue';
 import StatusBar from './StatusBar.vue';
+import MetaTags from '../MetaTags.vue';
 import { loadSetting, saveSetting } from './utils/settings';
 
 // Add this near the top of the script section, with other cookie utilities
@@ -79,10 +90,145 @@ let homeLocationFeature: HomeLocationFeature;
 
 // Computed property to get the catalog number of the selected satellite
 const selectedSatelliteCatalogNumber = computed(() => {
-  if (!selectedSatellite.value) return undefined;
+  if (!selectedSatellite.value) return null;
   const satellite = satellites.value.find(sat => sat.name === selectedSatellite.value);
-  return satellite?.catalogNumber;
+  return satellite?.catalogNumber || null;
 });
+
+// Function to parse URL parameters and apply them to the application state
+function parseUrlParameters() {
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  // Check for satellite ID parameter
+  const idParam = urlParams.get('id');
+  if (idParam && satellites.value.length > 0) {
+    // Find satellite by catalog number
+    const satellite = satellites.value.find(sat => sat.catalogNumber === idParam);
+    if (satellite) {
+      selectedSatellite.value = satellite.name;
+      console.log(`Selected satellite from URL parameter: ${satellite.name} (ID: ${idParam})`);
+    } else {
+      console.warn(`Satellite with ID ${idParam} not found`);
+    }
+  }
+  
+  // Check for home location parameters
+  const latParam = urlParams.get('lat');
+  const lonParam = urlParams.get('lon');
+  const aglParam = urlParams.get('agl');
+  
+  if (latParam && lonParam) {
+    try {
+      const lat = parseFloat(latParam);
+      const lon = parseFloat(lonParam);
+      
+      if (!isNaN(lat) && !isNaN(lon)) {
+        const coords = { lat, lon };
+        homeCoordinates.value = coords;
+        
+        // Update the home location feature
+        if (homeLocationFeature) {
+          homeLocationFeature.setLocation(coords);
+        }
+        
+        // Save to settings
+        saveSetting('homeLocation', coords);
+        
+        // Fetch elevation for the location
+        fetchElevation(lat, lon);
+        
+        console.log(`Set home location from URL parameters: ${lat}, ${lon}`);
+        
+        // Center the map on the location
+        if (mapInstance.value) {
+          const point = fromLonLat([lon, lat]);
+          mapInstance.value.getView().setCenter(point);
+          mapInstance.value.getView().setZoom(9);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse home location from URL parameters:', e);
+    }
+  }
+  
+  // Set AGL height if provided
+  if (aglParam) {
+    try {
+      const agl = parseInt(aglParam, 10);
+      if (!isNaN(agl) && agl >= 0 && agl <= 500) {
+        aglHeight.value = agl;
+        console.log(`Set AGL height from URL parameter: ${agl}m`);
+      }
+    } catch (e) {
+      console.error('Failed to parse AGL height from URL parameter:', e);
+    }
+  }
+}
+
+// Function to update URL with current state without reloading the page
+function updateUrlWithState() {
+  const url = new URL(window.location.href);
+  
+  // Update satellite ID parameter
+  if (selectedSatellite.value && selectedSatelliteCatalogNumber.value) {
+    url.searchParams.set('id', selectedSatelliteCatalogNumber.value);
+    
+    // Update hidden meta tag for satellite ID
+    updateMetaTag('name', 'satellite-id', selectedSatelliteCatalogNumber.value);
+  } else {
+    url.searchParams.delete('id');
+    
+    // Remove satellite ID from meta tag
+    updateMetaTag('name', 'satellite-id', '');
+  }
+  
+  // Update home location parameters
+  if (homeCoordinates.value) {
+    url.searchParams.set('lat', homeCoordinates.value.lat.toFixed(6));
+    url.searchParams.set('lon', homeCoordinates.value.lon.toFixed(6));
+    
+    if (aglHeight.value > 0) {
+      url.searchParams.set('agl', aglHeight.value.toString());
+    } else {
+      url.searchParams.delete('agl');
+    }
+  } else {
+    url.searchParams.delete('lat');
+    url.searchParams.delete('lon');
+    url.searchParams.delete('agl');
+  }
+  
+  // Update the URL without reloading the page
+  window.history.replaceState({}, '', url.toString());
+  
+  // Update page title based on selected satellite
+  updatePageTitle();
+}
+
+// Function to update the page title based on the current state
+function updatePageTitle() {
+  if (selectedSatellite.value) {
+    document.title = `Tracking ${selectedSatellite.value} - HamSats by LY2EN`;
+  } else if (homeCoordinates.value) {
+    document.title = `Satellite Tracker - HamSats by LY2EN`;
+  } else {
+    document.title = 'HamSats by LY2EN';
+  }
+  
+  // Add meta description
+  let metaDescription = document.querySelector('meta[name="description"]');
+  if (!metaDescription) {
+    metaDescription = document.createElement('meta');
+    metaDescription.setAttribute('name', 'description');
+    document.head.appendChild(metaDescription);
+  }
+  
+  if (selectedSatellite.value) {
+    metaDescription.setAttribute('content', `Track ${selectedSatellite.value} satellite in real-time with azimuth, elevation, and distance information. Amateur radio satellite tracking tool.`);
+  } else {
+    metaDescription.setAttribute('content', 'Track amateur radio satellites in real-time. View satellite positions, predict passes, and get transmitter information for ham radio operators.');
+  }
+}
 
 // Extract satellite catalog number from TLE line 1
 function extractCatalogNumber(tleLine1: string): string | undefined {
@@ -190,20 +336,8 @@ async function loadSatellites() {
     satellites.value = satelliteList;
     console.log(`Loaded ${satelliteList.length} satellites`);
     
-    // Check URL parameters for satellite selection
-    const urlParams = new URLSearchParams(window.location.search);
-    const idParam = urlParams.get('id');
-    
-    if (idParam) {
-      // Find satellite by catalog number
-      const satellite = satelliteList.find(sat => sat.catalogNumber === idParam);
-      if (satellite) {
-        selectedSatellite.value = satellite.name;
-        console.log(`Selected satellite from URL parameter: ${satellite.name} (ID: ${idParam})`);
-      } else {
-        console.warn(`Satellite with ID ${idParam} not found`);
-      }
-    }
+    // Parse URL parameters after satellites are loaded
+    parseUrlParameters();
     
     // If no satellite selected from URL, try to load saved selection
     if (!selectedSatellite.value) {
@@ -453,6 +587,9 @@ function toggleHomeLocation() {
       mapInstance.value.getView().setZoom(3);
       mapInstance.value.getView().setCenter(fromLonLat([0, 0]));
     }
+    
+    // Update URL to remove home location parameters
+    updateUrlWithState();
   } else {
     // Set home location
     if (!mapInstance.value) return;
@@ -474,14 +611,15 @@ function toggleHomeLocation() {
     // Save to cookie and fetch elevation
     saveSetting('homeLocation', coords);
     fetchElevation(coords.lat, coords.lon);
+    
+    // Update URL with new home location
+    updateUrlWithState();
   }
 }
 
 function updateAglHeight(height: number) {
   aglHeight.value = height;
-  if (homeLocationFeature) {
-    homeLocationFeature.updateHorizon(elevation.value! + height);
-  }
+  // The watch on aglHeight will handle the rest
 }
 
 // Predict the next satellites that will become visible in the next 24 hours
@@ -668,6 +806,9 @@ watch(homeCoordinates, async (newCoords) => {
   
   await fetchElevation(newCoords.lat, newCoords.lon);
   
+  // Update URL with new coordinates
+  updateUrlWithState();
+  
   if (elevation.value !== null) {
     homeLocationFeature.updateHorizon(elevation.value + aglHeight.value);
   }
@@ -735,27 +876,8 @@ watch(homeCoordinates, async (newCoords) => {
 
 // Watch for changes in selectedSatellite
 watch(selectedSatellite, (newSatellite) => {
-  // Update page title
-  document.title = newSatellite ? `Tracking ${newSatellite}` : 'HamSats by LY2EN';
-
-  // Save selection state (including empty string for no selection)
-  saveSetting('selectedSatellite', newSatellite);
-
-  // Update URL with satellite ID if selected
-  if (newSatellite) {
-    const satellite = satellites.value.find(sat => sat.name === newSatellite);
-    if (satellite && satellite.catalogNumber) {
-      // Update URL without reloading the page
-      const url = new URL(window.location.href);
-      url.searchParams.set('id', satellite.catalogNumber);
-      window.history.replaceState({}, '', url.toString());
-    }
-  } else {
-    // Remove id parameter from URL when no satellite is selected
-    const url = new URL(window.location.href);
-    url.searchParams.delete('id');
-    window.history.replaceState({}, '', url.toString());
-  }
+  // Update URL and page title
+  updateUrlWithState();
 
   // First, clean up the old satellite and its features
   if (currentSatelliteFeature.value) {
@@ -900,6 +1022,24 @@ function selectUpcomingSatellite(name: string) {
   selectedSatellite.value = name;
 }
 
+// Add a watch for aglHeight to update the URL
+watch(aglHeight, (newHeight) => {
+  saveSetting('aglHeight', newHeight);
+  updateUrlWithState();
+  
+  if (homeLocationFeature && elevation.value !== null) {
+    homeLocationFeature.updateHorizon(elevation.value + newHeight);
+  }
+  
+  if (currentSatelliteFeature.value && homeCoordinates.value && elevation.value !== null) {
+    const satInfo = currentSatelliteFeature.value.updatePosition(
+      homeCoordinates.value,
+      elevation.value + newHeight
+    );
+    satelliteInfo.value = satInfo;
+  }
+});
+
 // Initialize map on component mount
 onMounted(() => {
   showPath.value = loadSetting('showPath', false);
@@ -960,6 +1100,11 @@ onMounted(() => {
       upcomingVisibleSatellites.value = predictUpcomingVisibleSatellites();
     }
   }, 60000); // Update every minute
+
+  // Add listener for browser navigation events
+  window.addEventListener('popstate', () => {
+    parseUrlParameters();
+  });
 });
 
 // Clean up on component unmount
@@ -973,7 +1118,23 @@ onUnmounted(() => {
   if (upcomingPredictionInterval !== null) {
     window.clearInterval(upcomingPredictionInterval);
   }
+
+  // Remove popstate listener
+  window.removeEventListener('popstate', parseUrlParameters);
 });
+
+// Helper function to update a meta tag
+function updateMetaTag(attributeName: string, attributeValue: string, content: string) {
+  let metaTag = document.querySelector(`meta[${attributeName}="${attributeValue}"]`);
+  
+  if (!metaTag) {
+    metaTag = document.createElement('meta');
+    metaTag.setAttribute(attributeName, attributeValue);
+    document.head.appendChild(metaTag);
+  }
+  
+  metaTag.setAttribute('content', content);
+}
 </script>
 
 <style lang="scss">
