@@ -13,6 +13,7 @@
           :satellites="satellites"
           v-model:selected-satellite="selectedSatellite"
           v-model:show-path="showPath"
+          v-model:baofeng-mode="baofengMode"
         />
         <TransmitterInfoControl
           v-if="selectedSatellite && selectedSatelliteCatalogNumber"
@@ -21,6 +22,7 @@
         <UpcomingSatellitesControl
           v-if="!selectedSatellite && homeCoordinates && upcomingVisibleSatellites.length > 0"
           :upcoming-satellites="upcomingVisibleSatellites"
+          :baofeng-mode="baofengMode"
           @select-satellite="selectUpcomingSatellite"
         />
       </div>
@@ -68,6 +70,7 @@ const aglHeight = ref<number>(0);
 const selectedSatellite = ref<string>('');
 const satellites = ref<{ name: string; tle: [string, string]; position?: { lat: number; lng: number; height: number }; distance?: number; catalogNumber?: string }[]>([]);
 const showPath = ref<boolean>(false);
+const baofengMode = ref<boolean>(false);
 const satelliteInfo = ref<SatelliteInfo | null>(null);
 const currentSatelliteFeature = ref<SatelliteFeature | null>(null);
 const nearestSatellitesFeature = ref<NearestSatellitesFeature | null>(null);
@@ -85,12 +88,10 @@ const selectedSatelliteCatalogNumber = computed(() => {
 });
 
 // Extract satellite catalog number from TLE line 1
-function extractCatalogNumber(tleLine1: string): string | undefined {
+function extractCatalogNumber(line1: string): string | undefined {
   // Catalog number is in positions 3-7 (0-indexed)
-  if (tleLine1.startsWith('1 ') && tleLine1.length >= 8) {
-    return tleLine1.substring(2, 7).trim();
-  }
-  return undefined;
+  const catalogNumber = line1.substring(2, 7).trim();
+  return catalogNumber || undefined;
 }
 
 // Load satellites from file
@@ -339,29 +340,70 @@ async function loadSatellites() {
   }
 }
 
-function updateSatelliteDistances(satelliteList: typeof satellites.value) {
-  if (!homeCoordinates.value || !elevation.value) return;
-  
-  satelliteList.forEach(sat => {
-    if (sat.position) {
-      const info = calculateSatelliteInfo(
-        homeCoordinates.value!.lat,
-        homeCoordinates.value!.lon,
-        elevation.value || 0,
-        sat.position.lat,
-        sat.position.lng,
-        sat.position.height
-      );
-      sat.distance = info.distance;
+async function updateSatelliteDistances(satelliteList: typeof satellites.value) {
+  if (!homeCoordinates.value) return;
+
+  const home = homeCoordinates.value;
+
+  for (const satellite of satelliteList) {
+    try {
+      if (satellite.position) {
+        const info = calculateSatelliteInfo(
+          home.lat,
+          home.lon,
+          aglHeight.value,
+          satellite.position.lat,
+          satellite.position.lng,
+          satellite.position.height
+        );
+        satellite.distance = info.distance;
+      }
+    } catch (e) {
+      console.warn(`Failed to calculate distance for satellite ${satellite.name}:`, e);
     }
-  });
-  
+  }
+
+  // Sort by distance
   satelliteList.sort((a, b) => {
-    if (a.distance === undefined && b.distance === undefined) return 0;
     if (a.distance === undefined) return 1;
     if (b.distance === undefined) return -1;
     return a.distance - b.distance;
   });
+
+  // Update nearest satellites feature
+  if (nearestSatellitesFeature.value) {
+    let nearestSats = satelliteList.slice(0, baofengMode.value ? 50 : 5); // Get more satellites if in Baofeng mode to filter
+
+    if (baofengMode.value) {
+      // Filter for FM satellites
+      const fmSats = await Promise.all(
+        nearestSats.map(async sat => {
+          if (!sat.catalogNumber) return null;
+          try {
+            const response = await fetch(`/transponders/${sat.catalogNumber}.json`);
+            if (!response.ok) return null;
+            
+            const transmitters = await response.json();
+            const hasFM = transmitters.some((tx: any) => 
+              tx.alive && (
+                (tx.mode && tx.mode.includes('FM')) || 
+                (tx.uplink_mode && tx.uplink_mode.includes('FM'))
+              )
+            );
+            
+            return hasFM ? sat : null;
+          } catch (error) {
+            console.error('Error checking FM mode:', error);
+            return null;
+          }
+        })
+      );
+
+      nearestSats = fmSats.filter((sat): sat is NonNullable<typeof sat> => sat !== null).slice(0, 5);
+    }
+
+    nearestSatellitesFeature.value.updateSatellites(nearestSats);
+  }
 }
 
 // Fetch elevation data from Open-Elevation API
@@ -893,6 +935,11 @@ watch(showPath, (newValue) => {
   if (currentSatelliteFeature.value) {
     currentSatelliteFeature.value.setShowPath(newValue);
   }
+});
+
+// Watch for baofengMode changes to update nearest satellites
+watch(baofengMode, () => {
+  updateSatelliteDistances(satellites.value);
 });
 
 // Function to handle selection of an upcoming satellite

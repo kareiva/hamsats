@@ -33,9 +33,14 @@
         </div>
       </div>
     </div>
-    <div class="path-control" v-if="selectedSatellite">
-      <label>
+    <div class="controls" v-if="selectedSatellite">
+      <label class="control-item">
         <input type="checkbox" v-model="localShowPath"> Show future path
+      </label>
+    </div>
+    <div class="controls">
+      <label class="control-item baofeng-mode">
+        <input type="checkbox" v-model="baofengMode"> Baofeng (FM) mode
       </label>
     </div>
   </div>
@@ -54,6 +59,7 @@ export interface Satellite {
     height: number;
   };
   distance?: number;
+  catalogNumber?: string;
 }
 
 const props = defineProps<{
@@ -66,19 +72,70 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:selectedSatellite', value: string): void;
   (e: 'update:showPath', value: boolean): void;
+  (e: 'update:baofengMode', value: boolean): void;
 }>();
 
 const searchQuery = ref('');
 const showAutocomplete = ref(false);
 const localShowPath = ref(props.showPath);
 const highlightedIndex = ref(-1);
+const baofengMode = ref(false);
+const filteredResults = ref<Satellite[]>([]);
 
-const filteredSatellites = computed(() => {
+// Cache for FM satellite status
+const fmSatelliteCache = new Map<string, boolean>();
+
+async function checkIfSatelliteHasFM(catalogNumber: string): Promise<boolean> {
+  if (fmSatelliteCache.has(catalogNumber)) {
+    return fmSatelliteCache.get(catalogNumber)!;
+  }
+
+  try {
+    const response = await fetch(`/transponders/${catalogNumber}.json`);
+    if (!response.ok) return false;
+    
+    const transmitters = await response.json();
+    const hasFM = transmitters.some((tx: any) => 
+      tx.alive && (
+        (tx.mode && tx.mode.includes('FM')) || 
+        (tx.uplink_mode && tx.uplink_mode.includes('FM'))
+      )
+    );
+    
+    fmSatelliteCache.set(catalogNumber, hasFM);
+    return hasFM;
+  } catch (error) {
+    console.error('Error checking FM mode:', error);
+    return false;
+  }
+}
+
+async function updateFilteredSatellites() {
   const query = searchQuery.value.toLowerCase();
-  return props.satellites
-    .filter(sat => sat.name.toLowerCase().includes(query))
-    .slice(0, 10);
+  let filtered = props.satellites.filter(sat => sat.name.toLowerCase().includes(query));
+  
+  if (baofengMode.value) {
+    const fmChecks = await Promise.all(
+      filtered.map(async sat => {
+        if (!sat.catalogNumber) return false;
+        return await checkIfSatelliteHasFM(sat.catalogNumber);
+      })
+    );
+    filtered = filtered.filter((_, index) => fmChecks[index]);
+  }
+  
+  filteredResults.value = filtered.slice(0, 10);
+}
+
+// Watch for changes that should trigger filtering
+watch([searchQuery, baofengMode], () => {
+  updateFilteredSatellites();
 });
+
+// Initial filtering
+updateFilteredSatellites();
+
+const filteredSatellites = computed(() => filteredResults.value);
 
 function selectSatellite(name: string) {
   emit('update:selectedSatellite', name);
@@ -152,6 +209,12 @@ watch(() => props.selectedSatellite, (newValue) => {
 
 watch(filteredSatellites, () => {
   highlightedIndex.value = -1;
+});
+
+// Watch for baofengMode changes
+watch(baofengMode, (newValue) => {
+  emit('update:baofengMode', newValue);
+  updateFilteredSatellites();
 });
 </script>
 
@@ -240,13 +303,13 @@ watch(filteredSatellites, () => {
     }
   }
   
-  .path-control {
+  .controls {
     margin-top: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     
-    label {
+    .control-item {
       display: flex;
       align-items: center;
       gap: 6px;
@@ -257,6 +320,11 @@ watch(filteredSatellites, () => {
         cursor: pointer;
         width: 16px;
         height: 16px;
+      }
+      
+      &.baofeng-mode {
+        color: #2c3e50;
+        font-weight: 500;
       }
     }
   }
