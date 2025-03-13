@@ -75,6 +75,7 @@ const satelliteInfo = ref<SatelliteInfo | null>(null);
 const currentSatelliteFeature = ref<SatelliteFeature | null>(null);
 const nearestSatellitesFeature = ref<NearestSatellitesFeature | null>(null);
 const upcomingVisibleSatellites = ref<UpcomingSatellite[]>([]);
+const fmSatellitesLookup = ref<Record<string, boolean>>({});
 let upcomingPredictionInterval: number | null = null;
 
 // Features and Layers
@@ -369,30 +370,9 @@ async function updateSatelliteDistances(satelliteList: typeof satellites.value) 
 
     if (baofengMode.value) {
       // Filter for FM satellites
-      const fmSats = await Promise.all(
-        nearestSats.map(async sat => {
-          if (!sat.catalogNumber) return null;
-          try {
-            const response = await fetch(`/transponders/${sat.catalogNumber}.json`);
-            if (!response.ok) return null;
-            
-            const transmitters = await response.json();
-            const hasFM = transmitters.some((tx: any) => 
-              tx.alive && (
-                (tx.mode && tx.mode.includes('FM')) || 
-                (tx.uplink_mode && tx.uplink_mode.includes('FM'))
-              )
-            );
-            
-            return hasFM ? sat : null;
-          } catch (error) {
-            console.error('Error checking FM mode:', error);
-            return null;
-          }
-        })
-      );
-
-      nearestSats = fmSats.filter((sat): sat is NonNullable<typeof sat> => sat !== null).slice(0, 5);
+      nearestSats = nearestSats.filter(sat => 
+        sat.catalogNumber && fmSatellitesLookup.value[sat.catalogNumber]
+      ).slice(0, 5);
     }
 
     nearestSatellitesFeature.value.updateSatellites(nearestSats);
@@ -553,6 +533,18 @@ interface SatelliteWithName {
   tle: [string, string];
 }
 
+// Load FM satellites lookup data
+async function loadFmSatellitesLookup() {
+  try {
+    const response = await fetch('/fm-satellites.json');
+    if (response.ok) {
+      fmSatellitesLookup.value = await response.json();
+    }
+  } catch (error) {
+    console.error('Failed to load FM satellites lookup:', error);
+  }
+}
+
 async function predictUpcomingVisibleSatellites(): Promise<UpcomingSatellite[]> {
   if (!homeCoordinates.value) return [];
   
@@ -564,23 +556,7 @@ async function predictUpcomingVisibleSatellites(): Promise<UpcomingSatellite[]> 
     
     // Check FM capability first if in Baofeng mode
     if (baofengMode.value) {
-      let hasFM = false;
-      if (sat.catalogNumber) {
-        try {
-          const response = await fetch(`/transponders/${sat.catalogNumber}.json`);
-          if (response.ok) {
-            const transmitters = await response.json();
-            hasFM = transmitters.some((tx: any) => 
-              tx.alive && (
-                (tx.mode && tx.mode.includes('FM')) || 
-                (tx.uplink_mode && tx.uplink_mode.includes('FM'))
-              )
-            );
-          }
-        } catch (e) {
-          console.warn(`Failed to check FM capability for satellite ${sat.name}:`, e);
-        }
-      }
+      const hasFM = sat.catalogNumber ? fmSatellitesLookup.value[sat.catalogNumber] || false : false;
       if (!hasFM) continue; // Skip non-FM satellites in Baofeng mode
     }
     
@@ -634,23 +610,7 @@ async function predictUpcomingVisibleSatellites(): Promise<UpcomingSatellite[]> 
       }
 
       if (found && nextVisibleTime > now.getTime()) {  // Only add if visibility time is in the future
-        let hasFM = false;
-        if (sat.catalogNumber) {
-          try {
-            const response = await fetch(`/transponders/${sat.catalogNumber}.json`);
-            if (response.ok) {
-              const transmitters = await response.json();
-              hasFM = transmitters.some((tx: any) => 
-                tx.alive && (
-                  (tx.mode && tx.mode.includes('FM')) || 
-                  (tx.uplink_mode && tx.uplink_mode.includes('FM'))
-                )
-              );
-            }
-          } catch (e) {
-            console.warn(`Failed to check FM capability for satellite ${sat.name}:`, e);
-          }
-        }
+        const hasFM = sat.catalogNumber ? fmSatellitesLookup.value[sat.catalogNumber] || false : false;
 
         upcomingSats.push({
           name: sat.name,
@@ -935,6 +895,8 @@ watch([homeCoordinates, selectedSatellite], async () => {
 // Initialize map on component mount
 onMounted(async () => {
   showPath.value = loadSetting('showPath', false);
+  
+  await loadFmSatellitesLookup(); // Load FM satellites lookup data
   
   mapLayers = createMapLayers();
   mapInstance.value = initializeMap('map', mapLayers);
