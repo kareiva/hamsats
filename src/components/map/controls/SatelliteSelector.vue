@@ -24,7 +24,7 @@
           :key="sat.name"
           class="autocomplete-item"
           :class="{ 
-            'selected': sat.name === selectedSatellite,
+            'selected': sat.name === selectedSatellite?.name,
             'highlighted': index === highlightedIndex 
           }"
           @click="selectSatellite(sat.name)"
@@ -50,37 +50,34 @@
 import { ref, watch, computed } from 'vue';
 import type { HomeLocationCoordinates } from '../features/HomeLocation';
 
-export interface Satellite {
+interface SatelliteWithName {
   name: string;
   tle: [string, string];
-  position?: {
-    lat: number;
-    lng: number;
-    height: number;
-  };
+  position?: { lat: number; lng: number; height: number };
   distance?: number;
   catalogNumber?: string;
 }
 
 const props = defineProps<{
   homeCoordinates: HomeLocationCoordinates | null;
-  satellites: Satellite[];
-  selectedSatellite: string;
+  satellites: SatelliteWithName[];
+  selectedSatellite: SatelliteWithName | null;
   showPath: boolean;
+  baofengMode: boolean;
 }>();
 
 const emit = defineEmits<{
-  (e: 'update:selectedSatellite', value: string): void;
-  (e: 'update:showPath', value: boolean): void;
-  (e: 'update:baofengMode', value: boolean): void;
+  (e: 'update:selected-satellite', value: SatelliteWithName | null): void;
+  (e: 'update:show-path', value: boolean): void;
+  (e: 'update:baofeng-mode', value: boolean): void;
 }>();
 
 const searchQuery = ref('');
 const showAutocomplete = ref(false);
 const localShowPath = ref(props.showPath);
 const highlightedIndex = ref(-1);
-const baofengMode = ref(false);
-const filteredResults = ref<Satellite[]>([]);
+const baofengMode = ref(props.baofengMode);
+const filteredResults = ref<SatelliteWithName[]>([]);
 
 // Cache for FM satellite status
 const fmSatelliteCache = new Map<string, boolean>();
@@ -138,10 +135,13 @@ updateFilteredSatellites();
 const filteredSatellites = computed(() => filteredResults.value);
 
 function selectSatellite(name: string) {
-  emit('update:selectedSatellite', name);
-  searchQuery.value = name;
-  showAutocomplete.value = false;
-  highlightedIndex.value = -1;
+  const satellite = props.satellites.find(sat => sat.name === name);
+  if (satellite) {
+    emit('update:selected-satellite', satellite);
+    searchQuery.value = satellite.name;
+    showAutocomplete.value = false;
+    highlightedIndex.value = -1;
+  }
 }
 
 function navigateResults(direction: number) {
@@ -168,14 +168,14 @@ function selectHighlighted() {
 
 function onSearchInput() {
   if (searchQuery.value === '') {
-    emit('update:selectedSatellite', '');
+    emit('update:selected-satellite', null);
   }
   showAutocomplete.value = true;
   highlightedIndex.value = -1;
 }
 
 function clearSelection() {
-  emit('update:selectedSatellite', '');
+  emit('update:selected-satellite', null);
   searchQuery.value = '';
   showAutocomplete.value = false;
   highlightedIndex.value = -1;
@@ -191,7 +191,7 @@ window.addEventListener('click', (e: MouseEvent) => {
 });
 
 watch(localShowPath, (newValue) => {
-  emit('update:showPath', newValue);
+  emit('update:show-path', newValue);
 });
 
 watch(() => props.showPath, (newValue) => {
@@ -199,8 +199,8 @@ watch(() => props.showPath, (newValue) => {
 });
 
 watch(() => props.selectedSatellite, (newValue) => {
-  if (newValue && newValue !== searchQuery.value) {
-    const satellite = props.satellites.find(sat => sat.name === newValue);
+  if (newValue && searchQuery.value !== newValue.name) {
+    const satellite = props.satellites.find(sat => sat.name === newValue.name);
     if (satellite) {
       searchQuery.value = satellite.name;
     }
@@ -213,7 +213,7 @@ watch(filteredSatellites, () => {
 
 // Watch for baofengMode changes
 watch(baofengMode, (newValue) => {
-  emit('update:baofengMode', newValue);
+  emit('update:baofeng-mode', newValue);
   updateFilteredSatellites();
 });
 </script>
