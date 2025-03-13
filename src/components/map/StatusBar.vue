@@ -31,11 +31,16 @@
 import type { HomeLocationCoordinates } from './features/HomeLocation';
 import type { SatelliteInfo } from './features/SatelliteFeature';
 
+interface SatelliteWithName {
+  name: string;
+  tle: [string, string];
+}
+
 defineProps<{
   homeCoordinates: HomeLocationCoordinates | null;
   elevation: number | null;
   aglHeight: number;
-  selectedSatellite: string | null;
+  selectedSatellite: SatelliteWithName | null;
   satelliteInfo: SatelliteInfo | null;
 }>();
 </script>

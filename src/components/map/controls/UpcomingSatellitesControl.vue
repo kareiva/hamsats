@@ -1,12 +1,15 @@
 <template>
   <div class="upcoming-satellites-control" v-if="upcomingSatellites.length > 0">
     <div class="control-header" @click="toggleExpanded">
-      <h3>Upcoming Visible Satellites</h3>
+      <h3>Upcoming {{ baofengMode ? 'FM ' : '' }}Satellites</h3>
       <span class="toggle-icon">{{ expanded ? '▼' : '▶' }}</span>
     </div>
     <div class="satellite-list" v-if="expanded">
       <div v-for="satellite in sortedSatellites" :key="satellite.name" class="satellite-item">
-        <div class="satellite-name">{{ satellite.name }}</div>
+        <div class="satellite-name">
+          <span v-if="satellite.hasFM" class="fm-tag">FM</span>
+          {{ satellite.name }}
+        </div>
         <div class="satellite-time">
           {{ formatVisibilityTime(satellite.visibleAt) }}
         </div>
@@ -25,10 +28,12 @@ interface UpcomingSatellite {
   name: string;
   tle: [string, string];
   visibleAt: Date;
+  hasFM?: boolean;
 }
 
 const props = defineProps<{
   upcomingSatellites: UpcomingSatellite[];
+  baofengMode: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -36,9 +41,17 @@ const emit = defineEmits<{
 }>();
 
 const expanded = ref(true);
-const sortedSatellites = computed(() => [...props.upcomingSatellites].sort((a, b) => 
-  a.visibleAt.getTime() - b.visibleAt.getTime()
-));
+const sortedSatellites = computed(() => {
+  let satellites = [...props.upcomingSatellites];
+  
+  if (props.baofengMode) {
+    satellites = satellites.filter(sat => sat.hasFM);
+  }
+  
+  return satellites
+    .sort((a, b) => a.visibleAt.getTime() - b.visibleAt.getTime())
+    .slice(0, 10);
+});
 
 function toggleExpanded() {
   expanded.value = !expanded.value;
@@ -139,6 +152,16 @@ function formatVisibilityTime(date: Date): string {
       background-color: #0063b1;
     }
   }
+}
+
+.fm-tag {
+  background-color: #0078d4;
+  color: white;
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-right: 4px;
+  font-weight: bold;
 }
 
 @media (max-width: 640px) {
