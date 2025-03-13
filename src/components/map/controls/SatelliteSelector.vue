@@ -33,14 +33,14 @@
         </div>
       </div>
     </div>
-    <div class="controls" v-if="selectedSatellite">
-      <label class="control-item">
-        <input type="checkbox" v-model="localShowPath"> Show future path
-      </label>
-    </div>
     <div class="controls">
       <label class="control-item baofeng-mode">
         <input type="checkbox" v-model="baofengMode"> Baofeng (FM) mode
+      </label>
+    </div>
+    <div class="controls" v-if="selectedSatellite">
+      <label class="control-item">
+        <input type="checkbox" v-model="localShowPath"> Show future path
       </label>
     </div>
   </div>
