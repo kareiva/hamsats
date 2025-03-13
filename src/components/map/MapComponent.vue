@@ -562,6 +562,30 @@ async function predictUpcomingVisibleSatellites(): Promise<UpcomingSatellite[]> 
   for (const sat of satellites.value) {
     if (selectedSatellite.value && selectedSatellite.value.name === sat.name) continue;
     
+    // Check FM capability first if in Baofeng mode
+    if (baofengMode.value) {
+      let hasFM = false;
+      if (sat.catalogNumber) {
+        try {
+          const response = await fetch(`/transponders/${sat.catalogNumber}.json`);
+          if (response.ok) {
+            const transmitters = await response.json();
+            hasFM = transmitters.some((tx: any) => 
+              tx.alive && (
+                (tx.mode && tx.mode.includes('FM')) || 
+                (tx.uplink_mode && tx.uplink_mode.includes('FM'))
+              )
+            );
+          }
+        } catch (e) {
+          console.warn(`Failed to check FM capability for satellite ${sat.name}:`, e);
+        }
+      }
+      if (!hasFM) continue; // Skip non-FM satellites in Baofeng mode
+    }
+    
+    if (upcomingSats.length >= 10) break; // Stop after finding 10 satellites
+    
     try {
       let nextVisibleTime = now.getTime();
       let found = false;
