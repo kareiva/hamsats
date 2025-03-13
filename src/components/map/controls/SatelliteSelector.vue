@@ -214,6 +214,7 @@ watch(filteredSatellites, () => {
 // Watch for baofengMode changes
 watch(baofengMode, (newValue) => {
   emit('update:baofeng-mode', newValue);
+  clearSelection();  // Clear search field and selection when mode changes
   updateFilteredSatellites();
 });
 </script>

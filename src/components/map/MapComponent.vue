@@ -70,7 +70,7 @@ const aglHeight = ref<number>(0);
 const selectedSatellite = ref<SatelliteWithName | null>(null);
 const satellites = ref<{ name: string; tle: [string, string]; position?: { lat: number; lng: number; height: number }; distance?: number; catalogNumber?: string }[]>([]);
 const showPath = ref<boolean>(false);
-const baofengMode = ref<boolean>(false);
+const baofengMode = ref<boolean>(loadSetting('baofengMode', false));
 const satelliteInfo = ref<SatelliteInfo | null>(null);
 const currentSatelliteFeature = ref<SatelliteFeature | null>(null);
 const nearestSatellitesFeature = ref<NearestSatellitesFeature | null>(null);
@@ -531,8 +531,9 @@ function updateAglHeight(height: number) {
 }
 
 // Watch for baofengMode changes
-watch(baofengMode, async () => {
+watch(baofengMode, async (newValue) => {
   selectedSatellite.value = null;  // Clear satellite selection when mode changes
+  saveSetting('baofengMode', newValue);
   updateSatelliteDistances(satellites.value);
   if (homeCoordinates.value) {
     upcomingVisibleSatellites.value = await predictUpcomingVisibleSatellites();

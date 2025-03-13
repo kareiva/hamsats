@@ -48,7 +48,9 @@ const sortedSatellites = computed(() => {
     satellites = satellites.filter(sat => sat.hasFM);
   }
   
-  return satellites.sort((a, b) => a.visibleAt.getTime() - b.visibleAt.getTime());
+  return satellites
+    .sort((a, b) => a.visibleAt.getTime() - b.visibleAt.getTime())
+    .slice(0, 10);
 });
 
 function toggleExpanded() {
