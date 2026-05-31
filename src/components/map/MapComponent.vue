@@ -109,7 +109,7 @@ async function loadSatellites() {
   // If no valid cached data, try to fetch from server
   if (!satelliteData) {
     try {
-      const response = await fetch('https://celestrak.org/NORAD/elements/amateur.txt');
+      const response = await fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle');
       if (response.ok) {
         satelliteData = await response.text();
         // Cache the new data with timestamp
@@ -146,35 +146,33 @@ async function loadSatellites() {
 
   // Parse the satellite data
   try {
-    const lines = satelliteData.split('\n');
+    const lines = satelliteData.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     const satelliteList: { name: string; tle: [string, string]; position?: { lat: number; lng: number; height: number }; distance?: number; catalogNumber?: string }[] = [];
-    
-    for (let i = 0; i < lines.length; i += 3) {
-      if (i + 2 < lines.length) {
-        const name = lines[i].trim();
-        const line1 = lines[i + 1].trim();
-        const line2 = lines[i + 2].trim();
-        
-        if (name && line1 && line2 && line1.startsWith('1 ') && line2.startsWith('2 ')) {
-          try {
-            const tle: [string, string] = [line1, line2];
-            const now = Date.now();
-            const position = getLatLngObj(tle, now);
-            const satInfo = getSatelliteInfo(tle, now);
-            const catalogNumber = extractCatalogNumber(line1);
-            
-            satelliteList.push({
-              name,
-              tle,
-              position: { ...position, height: satInfo.height },
-              catalogNumber
-            });
-          } catch (e) {
-            console.warn(`Failed to calculate position for satellite ${name}:`, e);
-            const catalogNumber = extractCatalogNumber(line1);
-            satelliteList.push({ name, tle: [line1, line2], catalogNumber });
-          }
+
+    for (let i = 0; i < lines.length - 2; i++) {
+      const line1 = lines[i + 1];
+      const line2 = lines[i + 2];
+      if (line1.startsWith('1 ') && line2.startsWith('2 ')) {
+        const name = lines[i];
+        try {
+          const tle: [string, string] = [line1, line2];
+          const now = Date.now();
+          const position = getLatLngObj(tle, now);
+          const satInfo = getSatelliteInfo(tle, now);
+          const catalogNumber = extractCatalogNumber(line1);
+
+          satelliteList.push({
+            name,
+            tle,
+            position: { ...position, height: satInfo.height },
+            catalogNumber
+          });
+        } catch (e) {
+          console.warn(`Failed to calculate position for satellite ${name}:`, e);
+          const catalogNumber = extractCatalogNumber(line1);
+          satelliteList.push({ name, tle: [line1, line2], catalogNumber });
         }
+        i += 2;
       }
     }
     
