@@ -19,11 +19,11 @@
     "norad_cat_id": 43786,
     "norad_follow_id": null,
     "status": "active",
-    "updated": "2019-04-18T05:39:53.343316Z",
-    "citation": "CITATION NEEDED - https://xkcd.com/285/",
-    "service": "Unknown",
-    "iaru_coordination": "N/A",
-    "iaru_coordination_url": "",
+    "updated": "2025-07-11T07:34:02.167643Z",
+    "citation": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=435",
+    "service": "Amateur",
+    "iaru_coordination": "IARU Coordinated",
+    "iaru_coordination_url": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=435",
     "itu_notification": {
       "urls": []
     },
@@ -50,11 +50,11 @@
     "norad_cat_id": 43786,
     "norad_follow_id": null,
     "status": "active",
-    "updated": "2019-04-18T05:39:53.343316Z",
-    "citation": "CITATION NEEDED - https://xkcd.com/285/",
-    "service": "Unknown",
-    "iaru_coordination": "N/A",
-    "iaru_coordination_url": "",
+    "updated": "2025-07-11T07:33:35.408615Z",
+    "citation": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=435",
+    "service": "Amateur",
+    "iaru_coordination": "IARU Coordinated",
+    "iaru_coordination_url": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=435",
     "itu_notification": {
       "urls": []
     },

@@ -60,36 +60,5 @@
     },
     "frequency_violation": false,
     "unconfirmed": false
-  },
-  {
-    "uuid": "QiT2AaUjstdrK4migyAjph",
-    "description": "Mode-B Transponder",
-    "alive": true,
-    "type": "Transponder",
-    "uplink_low": 435030000,
-    "uplink_high": 435180000,
-    "uplink_drift": null,
-    "downlink_low": 145825000,
-    "downlink_high": 145975000,
-    "downlink_drift": null,
-    "mode": "LSB",
-    "mode_id": 20,
-    "uplink_mode": "USB",
-    "invert": true,
-    "baud": null,
-    "sat_id": "WAGS-8572-2494-3083-1675",
-    "norad_cat_id": 14129,
-    "norad_follow_id": null,
-    "status": "active",
-    "updated": "2020-11-16T07:23:24.219701Z",
-    "citation": "https://amsat-dl.org/en/amsat-phase-3-b-oscar-10/",
-    "service": "Amateur",
-    "iaru_coordination": "N/A",
-    "iaru_coordination_url": "",
-    "itu_notification": {
-      "urls": []
-    },
-    "frequency_violation": false,
-    "unconfirmed": false
   }
 ]

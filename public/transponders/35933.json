@@ -29,5 +29,36 @@
     },
     "frequency_violation": false,
     "unconfirmed": false
+  },
+  {
+    "uuid": "dKekeLctU9VrDaYg7QRQ9J",
+    "description": "Digipeater (Mobitex, idle mode: 10 sec interval)",
+    "alive": true,
+    "type": "Transceiver",
+    "uplink_low": 435950000,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 435950000,
+    "downlink_high": null,
+    "downlink_drift": null,
+    "mode": "GMSK",
+    "mode_id": 63,
+    "uplink_mode": "GMSK",
+    "invert": false,
+    "baud": 4800,
+    "sat_id": "XFUT-4878-1223-5887-3249",
+    "norad_cat_id": 35933,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2025-10-03T06:42:25.643535Z",
+    "citation": "https://network.satnogs.org/observations/12462269/ (tested by DK1TTY)",
+    "service": "Amateur",
+    "iaru_coordination": "IARU Coordinated",
+    "iaru_coordination_url": "https://iaru.amsat-uk.org/informal_detail.php?serialnum=86",
+    "itu_notification": {
+      "urls": []
+    },
+    "frequency_violation": false,
+    "unconfirmed": false
   }
 ]

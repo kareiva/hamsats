@@ -1,0 +1,33 @@
+[
+  {
+    "uuid": "C4SzpxhvuwzpKRVRQTbAWR",
+    "description": "Mode U TLM 2k4 GMSK AX25",
+    "alive": true,
+    "type": "Transmitter",
+    "uplink_low": null,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 436750000,
+    "downlink_high": null,
+    "downlink_drift": null,
+    "mode": "GMSK",
+    "mode_id": 63,
+    "uplink_mode": null,
+    "invert": false,
+    "baud": 2400,
+    "sat_id": "ZYKO-7290-5830-6811-4050",
+    "norad_cat_id": 53109,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2022-07-12T16:22:16.308126Z",
+    "citation": "CITATION NEEDED - https://xkcd.com/285/",
+    "service": "Amateur",
+    "iaru_coordination": "IARU Coordinated",
+    "iaru_coordination_url": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=770",
+    "itu_notification": {
+      "urls": []
+    },
+    "frequency_violation": false,
+    "unconfirmed": false
+  }
+]
