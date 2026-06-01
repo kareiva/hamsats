@@ -17,8 +17,6 @@
     "generate-seo": "npm run generate-sitemap && npm run generate-robots"
   },
   "dependencies": {
-    "@types/js-cookie": "^3.0.6",
-    "js-cookie": "^3.0.5",
     "ol": "^8.2.0",
     "tle.js": "^4.9.0",
     "vue": "^3.3.4",
