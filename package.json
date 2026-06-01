@@ -9,6 +9,7 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit -p tsconfig.json --composite false",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
+    "fetch-satellites": "node scripts/fetch-satellites.js",
     "fetch-transponders": "node scripts/fetch-transponders.js",
     "generate-transponder-lookup": "node scripts/generate-transponder-lookup.js",
     "generate-sitemap": "node scripts/generate-sitemap.js",
