@@ -43,7 +43,6 @@ import type { Map as OlMap } from 'ol';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { Translate } from 'ol/interaction';
 import { getSatelliteInfo, getLatLngObj, extractCatalogNumber } from '@/components/map/utils/satellite';
-import Cookies from 'js-cookie';
 import { createMapLayers, initializeMap, type MapLayers } from './utils/mapSetup';
 import { calculateSatelliteInfo } from './utils/calculations';
 import { HomeLocationFeature, type HomeLocationCoordinates } from './features/HomeLocation';
@@ -54,11 +53,8 @@ import SatelliteSelector from './controls/SatelliteSelector.vue';
 import UpcomingSatellitesControl from './controls/UpcomingSatellitesControl.vue';
 import TransmitterInfoControl from './controls/TransmitterInfoControl.vue';
 import StatusBar from './StatusBar.vue';
-import { loadSetting, saveSetting } from './utils/settings';
+import { loadSetting, saveSetting, removeSetting } from './utils/settings';
 
-// Add this near the top of the script section, with other cookie utilities
-const SATELLITE_DATA_COOKIE = 'satgazer_amateur_txt';
-const SATELLITE_DATA_TIMESTAMP_COOKIE = 'satgazer_amateur_txt_timestamp';
 const SATELLITE_DATA_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 // State
@@ -92,18 +88,13 @@ const selectedSatelliteCatalogNumber = computed(() => {
 async function loadSatellites() {
   let satelliteData: string | null = null;
 
-  // Try to load from cookie first
-  const cachedData = Cookies.get(SATELLITE_DATA_COOKIE);
-  const cachedTimestamp = loadSetting<number>(SATELLITE_DATA_TIMESTAMP_COOKIE, 0);
+  const cachedData = loadSetting<string | null>('amateur_txt', null);
+  const cachedTimestamp = loadSetting<number>('amateur_txt_timestamp', 0);
   const now = Date.now();
 
   if (cachedData && cachedTimestamp && (now - cachedTimestamp < SATELLITE_DATA_EXPIRY)) {
-    try {
-      satelliteData = JSON.parse(cachedData);
-      console.log('Using cached satellite data (age: ' + ((now - cachedTimestamp) / 3600000).toFixed(1) + ' hours)');
-    } catch (e) {
-      console.warn('Failed to parse cached satellite data:', e);
-    }
+    satelliteData = cachedData;
+    console.log('Using cached satellite data (age: ' + ((now - cachedTimestamp) / 3600000).toFixed(1) + ' hours)');
   }
 
   // If no valid cached data, try to fetch from server
@@ -112,9 +103,8 @@ async function loadSatellites() {
       const response = await fetch('https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle');
       if (response.ok) {
         satelliteData = await response.text();
-        // Cache the new data with timestamp
-        Cookies.set(SATELLITE_DATA_COOKIE, JSON.stringify(satelliteData));
-        saveSetting(SATELLITE_DATA_TIMESTAMP_COOKIE, now);
+        saveSetting('amateur_txt', satelliteData);
+        saveSetting('amateur_txt_timestamp', now);
         console.log('Fetched and cached new satellite data');
       } else if (response.status === 403) {
         console.warn('Access forbidden to Celestrak API');
@@ -414,9 +404,8 @@ function clearHomeLocation() {
     homeLocationFeature.clearLocation();
   }
   
-  // Clear cookie
-  Cookies.remove(SATELLITE_DATA_COOKIE);
-  Cookies.remove(SATELLITE_DATA_TIMESTAMP_COOKIE);
+  removeSetting('amateur_txt');
+  removeSetting('amateur_txt_timestamp');
   
   // Clear satellite selection and distances
   selectedSatellite.value = null;
