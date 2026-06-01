@@ -31,37 +31,6 @@
     "unconfirmed": false
   },
   {
-    "uuid": "q6CVKJirfoUjNzD2A4rxsk",
-    "description": "FM Transponder",
-    "alive": true,
-    "type": "Transceiver",
-    "uplink_low": 144350000,
-    "uplink_high": null,
-    "uplink_drift": null,
-    "downlink_low": 437200000,
-    "downlink_high": null,
-    "downlink_drift": null,
-    "mode": "FM",
-    "mode_id": 1,
-    "uplink_mode": "FM",
-    "invert": false,
-    "baud": null,
-    "sat_id": "AHVS-7983-8710-8819-8034",
-    "norad_cat_id": 40908,
-    "norad_follow_id": null,
-    "status": "active",
-    "updated": "2019-04-18T05:39:53.343316Z",
-    "citation": "CITATION NEEDED - https://xkcd.com/285/",
-    "service": "Unknown",
-    "iaru_coordination": "N/A",
-    "iaru_coordination_url": "",
-    "itu_notification": {
-      "urls": []
-    },
-    "frequency_violation": false,
-    "unconfirmed": false
-  },
-  {
     "uuid": "xHDr7c3A7TuTPFcVvHKQuN",
     "description": "APRS Digipeater",
     "alive": true,

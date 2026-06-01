@@ -31,37 +31,6 @@
     "unconfirmed": false
   },
   {
-    "uuid": "nc9CoLLaPDMyqj9m2RfxAU",
-    "description": "AFSK1k2",
-    "alive": true,
-    "type": "Transceiver",
-    "uplink_low": 437500000,
-    "uplink_high": null,
-    "uplink_drift": 0,
-    "downlink_low": 145900000,
-    "downlink_high": null,
-    "downlink_drift": null,
-    "mode": "AFSK",
-    "mode_id": 49,
-    "uplink_mode": "AFSK",
-    "invert": false,
-    "baud": 1200,
-    "sat_id": "HIEK-3729-5596-2727-4744",
-    "norad_cat_id": 43678,
-    "norad_follow_id": null,
-    "status": "active",
-    "updated": "2024-05-05T19:21:50.847789Z",
-    "citation": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=593",
-    "service": "Amateur",
-    "iaru_coordination": "IARU Coordinated",
-    "iaru_coordination_url": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=593",
-    "itu_notification": {
-      "urls": []
-    },
-    "frequency_violation": false,
-    "unconfirmed": false
-  },
-  {
     "uuid": "HYB3Frb2cf4LUhzfbTCCw4",
     "description": "FM VOICE",
     "alive": true,

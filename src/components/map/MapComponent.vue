@@ -370,21 +370,26 @@ async function updateSatelliteDistances(satelliteList: typeof satellites.value) 
 // Fetch elevation data from Open-Elevation API
 async function fetchElevation(lat: number, lon: number) {
   try {
-    const cachedElevationKey = `elevation_${lat.toFixed(6)}_${lon.toFixed(6)}`;
-    const cachedElevation = loadSetting<number | null>(cachedElevationKey, null);
-    
-    if (cachedElevation) {
-      elevation.value = cachedElevation;
+    const cacheKey = `${lat.toFixed(6)}_${lon.toFixed(6)}`;
+    const cache = loadSetting<Record<string, number>>('elevation_cache', {});
+
+    if (cache[cacheKey] !== undefined) {
+      elevation.value = cache[cacheKey];
       return;
     }
-    
+
     const response = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`);
     const data = await response.json();
-    
+
     if (data && data.results && data.results.length > 0) {
       elevation.value = data.results[0].elevation;
       if (elevation.value !== null) {
-        saveSetting(cachedElevationKey, elevation.value);
+        cache[cacheKey] = elevation.value;
+        const keys = Object.keys(cache);
+        if (keys.length > 10) {
+          delete cache[keys[0]];
+        }
+        saveSetting('elevation_cache', cache);
       }
     }
   } catch (error) {

@@ -1,0 +1,33 @@
+[
+  {
+    "uuid": "Nh9Kp45cR9Q9EMgCYAhhsE",
+    "description": "Mode U - GFSK9k6 - AX.25 Beacon and Ham Payload (Geoscan framing)",
+    "alive": true,
+    "type": "Transmitter",
+    "uplink_low": null,
+    "uplink_high": null,
+    "uplink_drift": null,
+    "downlink_low": 436436000,
+    "downlink_high": null,
+    "downlink_drift": 2979,
+    "mode": "GFSK",
+    "mode_id": 75,
+    "uplink_mode": null,
+    "invert": false,
+    "baud": 9600,
+    "sat_id": "VCOU-5138-4852-6587-2660",
+    "norad_cat_id": 64894,
+    "norad_follow_id": null,
+    "status": "active",
+    "updated": "2025-08-07T09:04:35.575548Z",
+    "citation": "Satellite Team",
+    "service": "Unknown",
+    "iaru_coordination": "IARU Uncoordinated",
+    "iaru_coordination_url": "",
+    "itu_notification": {
+      "urls": []
+    },
+    "frequency_violation": true,
+    "unconfirmed": false
+  }
+]
