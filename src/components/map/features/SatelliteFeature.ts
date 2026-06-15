@@ -32,10 +32,11 @@ export class SatelliteFeature {
   private lineSource: VectorSource;
   private tle: [string, string];
   private name: string;
+  private arrowFeature: Feature<Point>;
+  private arrowIconInstance: Icon;
   private showPath: boolean = false;
   private updateInterval: number | null = null;
   private pathUpdateInterval: number | null = null;
-  private arrowIcon: Icon | null = null;
 
   constructor(
     name: string,
@@ -52,19 +53,15 @@ export class SatelliteFeature {
     this.horizonFeature = new Feature();
     this.lineOfSightFeature = new Feature();
     this.satelliteToPathLine = new Feature();
+    this.arrowIconInstance = new Icon({ src: arrowIconUri('#F57C00'), scale: 0.75, anchor: [0.5, 0.5], rotation: 0 });
+    this.arrowFeature = new Feature<Point>();
+    this.arrowFeature.setStyle(new Style({ image: this.arrowIconInstance }));
 
     this.setupStyles();
     this.addFeaturesToSources();
   }
 
   private setupStyles() {
-    this.arrowIcon = new Icon({
-      src: arrowIconUri('#F57C00'),
-      scale: 0.75,
-      anchor: [0.5, 0.5],
-      rotation: 0,
-    });
-
     this.satelliteFeature.setStyle([
       new Style({
         image: new Icon({
@@ -86,7 +83,6 @@ export class SatelliteFeature {
           textBaseline: 'middle'
         })
       }),
-      new Style({ image: this.arrowIcon }),
     ]);
 
     this.horizonFeature.setStyle(
@@ -131,6 +127,7 @@ export class SatelliteFeature {
 
   private addFeaturesToSources() {
     this.vectorSource.addFeature(this.satelliteFeature);
+    this.vectorSource.addFeature(this.arrowFeature);
     this.vectorSource.addFeature(this.horizonFeature);
     this.lineSource.addFeature(this.lineOfSightFeature);
     this.vectorSource.addFeature(this.satelliteToPathLine);
@@ -149,12 +146,10 @@ export class SatelliteFeature {
     const point = fromLonLat([position.lng, position.lat]);
     this.satelliteFeature.setGeometry(new Point(point));
 
-    if (this.arrowIcon) {
-      const futurePos = getLatLngObj(this.tle, now + 30000);
-      const bearing = calculateBearing(position.lat, position.lng, futurePos.lat, futurePos.lng);
-      this.arrowIcon.setRotation(bearing);
-      this.satelliteFeature.changed();
-    }
+    const futurePos = getLatLngObj(this.tle, now + 30000);
+    const bearing = calculateBearing(position.lat, position.lng, futurePos.lat, futurePos.lng);
+    this.arrowIconInstance.setRotation(bearing);
+    this.arrowFeature.setGeometry(new Point(fromLonLat([futurePos.lng, futurePos.lat])));
 
     // Update horizon
     const horizonPoints = calculateSatelliteHorizonPoints(position.lat, position.lng, position.height);
@@ -386,6 +381,9 @@ export class SatelliteFeature {
     // Remove all features from their respective sources
     if (this.satelliteFeature) {
       this.vectorSource.removeFeature(this.satelliteFeature);
+    }
+    if (this.arrowFeature) {
+      this.vectorSource.removeFeature(this.arrowFeature);
     }
     if (this.horizonFeature) {
       this.vectorSource.removeFeature(this.horizonFeature);

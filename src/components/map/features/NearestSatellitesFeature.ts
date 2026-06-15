@@ -102,18 +102,24 @@ export class NearestSatellitesFeature {
             textBaseline: 'middle'
           })
         }),
-        new Style({
-          image: new Icon({
-            src: arrowIconUri('#388E3C'),
-            scale: 0.6,
-            anchor: [0.5, 0.5],
-            rotation: bearing,
-          })
-        }),
       ]);
 
+      const arrowFeature = new Feature({
+        geometry: new Point(fromLonLat([futurePos.lng, futurePos.lat])),
+      });
+      arrowFeature.setStyle(new Style({
+        image: new Icon({
+          src: arrowIconUri('#388E3C'),
+          scale: 0.6,
+          anchor: [0.5, 0.5],
+          rotation: bearing,
+        }),
+      }));
+
       this.vectorSource.addFeature(feature);
+      this.vectorSource.addFeature(arrowFeature);
       this.features.push(feature);
+      this.features.push(arrowFeature);
     });
   }
 
