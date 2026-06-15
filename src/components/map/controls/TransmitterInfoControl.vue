@@ -118,6 +118,7 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
   overflow: hidden;
   margin-top: 10px;
   z-index: 1010;
+  pointer-events: auto;
 }
 
 .control-header {

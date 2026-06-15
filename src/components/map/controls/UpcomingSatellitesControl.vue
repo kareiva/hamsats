@@ -83,6 +83,7 @@ function formatVisibilityTime(date: Date): string {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   width: 100%;
   max-width: 300px;
+  pointer-events: auto;
   overflow: hidden;
   margin-top: 10px;
 }

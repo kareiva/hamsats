@@ -226,6 +226,7 @@ watch(baofengMode, (newValue) => {
   padding: 8px;
   border-radius: 4px;
   max-width: calc(100vw - 20px);
+  pointer-events: auto;
   
   .search-container {
     position: relative;

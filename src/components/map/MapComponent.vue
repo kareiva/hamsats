@@ -965,7 +965,8 @@ onUnmounted(() => {
 .custom-controls {
   position: absolute;
   z-index: 1000;
-  
+  pointer-events: none;
+
   &.top-right {
     top: 10px;
     right: 10px;

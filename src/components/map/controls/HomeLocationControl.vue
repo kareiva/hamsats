@@ -62,6 +62,7 @@ watch(() => props.aglHeight, (newValue) => {
   gap: 5px;
   background-color: rgba(255, 255, 255, 0.7);
   border-radius: 4px;
+  pointer-events: auto;
   padding: 8px;
   
   .control-header {
