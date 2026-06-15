@@ -201,6 +201,7 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
   .transmitter-info-control {
     width: 50vw;
     max-width: 50vw;
+    align-self: flex-end;
   }
 }
 </style> 
