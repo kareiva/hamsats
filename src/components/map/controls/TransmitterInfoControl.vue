@@ -118,6 +118,7 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
   overflow: hidden;
   margin-top: 10px;
   z-index: 1010;
+  pointer-events: auto;
 }
 
 .control-header {
@@ -198,7 +199,9 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
 
 @media (max-width: 640px) {
   .transmitter-info-control {
-    max-width: 100%;
+    width: 50vw;
+    max-width: 50vw;
+    align-self: flex-end;
   }
 }
 </style> 

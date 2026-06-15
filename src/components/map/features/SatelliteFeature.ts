@@ -6,8 +6,7 @@ import { Style, Icon, Fill, Stroke, Text } from 'ol/style';
 import { fromLonLat } from 'ol/proj';
 import VectorSource from 'ol/source/Vector';
 import { getLatLngObj, getSatelliteInfo } from 'tle.js';
-// @ts-ignore
-import satelliteIcon from '@/assets/satellite.svg';
+import { satelliteIconUri, arrowIconUri, calculateBearing } from '../utils/icons';
 import { createCurvedLine, calculateSatelliteHorizonPoints, calculateSatelliteInfo } from '../utils/calculations';
 import type { HomeLocationCoordinates } from './HomeLocation';
 
@@ -33,6 +32,8 @@ export class SatelliteFeature {
   private lineSource: VectorSource;
   private tle: [string, string];
   private name: string;
+  private arrowFeature: Feature<Point>;
+  private arrowIconInstance: Icon;
   private showPath: boolean = false;
   private updateInterval: number | null = null;
   private pathUpdateInterval: number | null = null;
@@ -52,6 +53,9 @@ export class SatelliteFeature {
     this.horizonFeature = new Feature();
     this.lineOfSightFeature = new Feature();
     this.satelliteToPathLine = new Feature();
+    this.arrowIconInstance = new Icon({ src: arrowIconUri('#F57C00'), scale: 0.75, anchor: [0.5, 0.5], rotation: 0 });
+    this.arrowFeature = new Feature<Point>();
+    this.arrowFeature.setStyle(new Style({ image: this.arrowIconInstance }));
 
     this.setupStyles();
     this.addFeaturesToSources();
@@ -61,17 +65,16 @@ export class SatelliteFeature {
     this.satelliteFeature.setStyle([
       new Style({
         image: new Icon({
-          src: satelliteIcon,
+          src: satelliteIconUri('#F57C00'),
           scale: 1.5,
           anchor: [0.5, 0.5],
-          rotation: Math.PI / 4
         })
       }),
       new Style({
         text: new Text({
           text: this.name,
           font: '14px monospace',
-          fill: new Fill({ color: '#388E3C' }),
+          fill: new Fill({ color: '#F57C00' }),
           stroke: new Stroke({ color: 'white', width: 3 }),
           backgroundFill: new Fill({ color: 'rgba(255, 255, 255, 0.8)' }),
           padding: [5, 5, 5, 5],
@@ -79,7 +82,7 @@ export class SatelliteFeature {
           textAlign: 'left',
           textBaseline: 'middle'
         })
-      })
+      }),
     ]);
 
     this.horizonFeature.setStyle(
@@ -95,13 +98,13 @@ export class SatelliteFeature {
     this.lineOfSightFeature.setStyle(
       new Style({
         stroke: new Stroke({
-          color: 'rgba(56, 142, 60, 0.8)',
+          color: 'rgba(245, 124, 0, 0.8)',
           width: 2,
           lineDash: [4, 4]
         }),
         text: new Text({
           font: '12px monospace',
-          fill: new Fill({ color: '#388E3C' }),
+          fill: new Fill({ color: '#F57C00' }),
           stroke: new Stroke({ color: 'white', width: 3 }),
           backgroundFill: new Fill({ color: 'rgba(255, 255, 255, 0.8)' }),
           padding: [5, 5, 5, 5],
@@ -124,6 +127,7 @@ export class SatelliteFeature {
 
   private addFeaturesToSources() {
     this.vectorSource.addFeature(this.satelliteFeature);
+    this.vectorSource.addFeature(this.arrowFeature);
     this.vectorSource.addFeature(this.horizonFeature);
     this.lineSource.addFeature(this.lineOfSightFeature);
     this.vectorSource.addFeature(this.satelliteToPathLine);
@@ -137,9 +141,15 @@ export class SatelliteFeature {
   }
 
   public updatePosition(homeLocation?: HomeLocationCoordinates, observerHeight?: number): SatelliteInfo | null {
+    const now = Date.now();
     const position = this.getCurrentPosition();
     const point = fromLonLat([position.lng, position.lat]);
     this.satelliteFeature.setGeometry(new Point(point));
+
+    const futurePos = getLatLngObj(this.tle, now + 30000);
+    const bearing = calculateBearing(position.lat, position.lng, futurePos.lat, futurePos.lng);
+    this.arrowIconInstance.setRotation(bearing);
+    this.arrowFeature.setGeometry(new Point(fromLonLat([futurePos.lng, futurePos.lat])));
 
     // Update horizon
     const horizonPoints = calculateSatelliteHorizonPoints(position.lat, position.lng, position.height);
@@ -253,11 +263,11 @@ export class SatelliteFeature {
     // Add markers at 5-minute intervals, but check for meridian crossing
     for (let i = 0; i < linePoints.length; i += 5) {
       const point = linePoints[i];
-      
+
       // Only add marker if it's part of a valid segment
-      const isValidMarker = segments.some(segment => 
-        segment.some(segPoint => 
-          Math.abs(segPoint[0] - point[0]) < 180 && 
+      const isValidMarker = segments.some(segment =>
+        segment.some(segPoint =>
+          Math.abs(segPoint[0] - point[0]) < 180 &&
           Math.abs(segPoint[1] - point[1]) < 90
         )
       );
@@ -268,26 +278,38 @@ export class SatelliteFeature {
           geometry: new Point(mapPoint)
         });
 
+        const nextPoint = linePoints[Math.min(i + 1, linePoints.length - 1)];
+        const bearing = calculateBearing(point[1], point[0], nextPoint[1], nextPoint[0]);
+
         const minutes = i;
-        markerFeature.setStyle(new Style({
-          image: new Icon({
-            src: satelliteIcon,
-            scale: 0.5,
-            anchor: [0.5, 0.5],
-            rotation: Math.PI / 4
+        markerFeature.setStyle([
+          new Style({
+            image: new Icon({
+              src: satelliteIconUri('#F57C00'),
+              scale: 0.6,
+              anchor: [0.5, 0.5],
+            }),
+            text: new Text({
+              text: `+${minutes}m`,
+              font: '12px monospace',
+              fill: new Fill({ color: '#F57C00' }),
+              stroke: new Stroke({ color: 'white', width: 3 }),
+              backgroundFill: new Fill({ color: 'rgba(255, 255, 255, 0.8)' }),
+              padding: [2, 2, 2, 2],
+              offsetX: 15,
+              textAlign: 'left',
+              textBaseline: 'middle'
+            })
           }),
-          text: new Text({
-            text: `+${minutes}m`,
-            font: '12px monospace',
-            fill: new Fill({ color: '#388E3C' }),
-            stroke: new Stroke({ color: 'white', width: 3 }),
-            backgroundFill: new Fill({ color: 'rgba(255, 255, 255, 0.8)' }),
-            padding: [2, 2, 2, 2],
-            offsetX: 15,
-            textAlign: 'left',
-            textBaseline: 'middle'
-          })
-        }));
+          new Style({
+            image: new Icon({
+              src: arrowIconUri('#F57C00'),
+              scale: 0.45,
+              anchor: [0.5, 0.5],
+              rotation: bearing,
+            }),
+          }),
+        ]);
 
         this.lineSource.addFeature(markerFeature);
         this.pathFeatures.push(markerFeature);
@@ -359,6 +381,9 @@ export class SatelliteFeature {
     // Remove all features from their respective sources
     if (this.satelliteFeature) {
       this.vectorSource.removeFeature(this.satelliteFeature);
+    }
+    if (this.arrowFeature) {
+      this.vectorSource.removeFeature(this.arrowFeature);
     }
     if (this.horizonFeature) {
       this.vectorSource.removeFeature(this.horizonFeature);

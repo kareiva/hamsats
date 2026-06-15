@@ -1,6 +1,6 @@
 <template>
   <div class="status-bar">
-    <div v-if="homeCoordinates" class="status-content">
+    <div v-if="homeCoordinates" class="status-content" :class="{ 'sat-selected': selectedSatellite }">
       <div class="status-item location">
         <span class="label">Home:</span>
         {{ homeCoordinates.lat.toFixed(6) }}° N, {{ homeCoordinates.lon.toFixed(6) }}° E
@@ -50,7 +50,7 @@ defineProps<{
   min-height: 30px;
   background-color: #f0f0f0;
   border-top: 1px solid #ccc;
-  padding: 5px 10px;
+  padding: 5px 10px calc(5px + env(safe-area-inset-bottom, 0px));
   font-family: monospace;
   font-size: 14px;
   
@@ -80,14 +80,14 @@ defineProps<{
 @media (max-width: 640px) {
   .status-bar {
     font-size: 12px;
-    padding: 4px 6px;
-    
+    padding: 4px 6px max(56px, env(safe-area-inset-bottom, 0px));
+
     .status-content {
       gap: 6px;
-      
+
       .status-item {
         padding: 1px 3px;
-        
+
         &.location {
           width: 100%;
           text-align: center;
@@ -95,11 +95,18 @@ defineProps<{
           padding-bottom: 3px;
           margin-bottom: 2px;
         }
-        
+
         .label {
           &:not(:first-child) {
             margin-left: 4px;
           }
+        }
+      }
+
+      &.sat-selected {
+        .status-item.location,
+        .status-item.elevation {
+          display: none;
         }
       }
     }
@@ -115,10 +122,15 @@ defineProps<{
         border-bottom: 1px solid #ddd;
         padding-bottom: 2px;
         margin-bottom: 2px;
-        
+
         &:last-child {
           border-bottom: none;
           margin-bottom: 0;
+        }
+
+        &.location,
+        &.elevation {
+          display: none;
         }
       }
     }

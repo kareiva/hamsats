@@ -1,20 +1,22 @@
 <template>
   <div class="container">
     <div id="map" class="map-container">
-      <div class="custom-controls top-right">
-        <HomeLocationControl
-          :home-coordinates="homeCoordinates"
-          :agl-height="aglHeight"
-          @toggle-home="toggleHomeLocation"
-          @update:agl-height="updateAglHeight"
-        />
-        <SatelliteSelector
-          :home-coordinates="homeCoordinates"
-          :satellites="satellites"
-          v-model:selected-satellite="selectedSatellite"
-          v-model:show-path="showPath"
-          v-model:baofeng-mode="baofengMode"
-        />
+      <div class="custom-controls top-right" ref="controlsEl">
+        <div class="top-row-controls">
+          <HomeLocationControl
+            :home-coordinates="homeCoordinates"
+            :agl-height="aglHeight"
+            @toggle-home="toggleHomeLocation"
+            @update:agl-height="updateAglHeight"
+          />
+          <SatelliteSelector
+            :home-coordinates="homeCoordinates"
+            :satellites="satellites"
+            v-model:selected-satellite="selectedSatellite"
+            v-model:show-path="showPath"
+            v-model:baofeng-mode="baofengMode"
+          />
+        </div>
         <TransmitterInfoControl
           v-if="selectedSatellite && selectedSatelliteCatalogNumber"
           :catalog-number="selectedSatelliteCatalogNumber"
@@ -38,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch, onUnmounted, computed } from 'vue';
+import { onMounted, ref, watch, onUnmounted, computed, nextTick } from 'vue';
 import type { Map as OlMap } from 'ol';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { Translate } from 'ol/interaction';
@@ -74,6 +76,8 @@ const upcomingVisibleSatellites = ref<UpcomingSatellite[]>([]);
 const fmSatellitesLookup = ref<Record<string, boolean>>({});
 let upcomingPredictionInterval: number | null = null;
 
+const controlsEl = ref<HTMLElement | null>(null);
+
 // Features and Layers
 let homeLocationFeature: HomeLocationFeature;
 
@@ -83,6 +87,21 @@ const selectedSatelliteCatalogNumber = computed(() => {
   const satellite = satellites.value.find(sat => sat.name === selectedSatellite.value!.name);
   return satellite?.catalogNumber;
 });
+
+async function fitViewForSatellite(sat: { lat: number; lng: number }) {
+  if (!mapInstance.value) return;
+  const satPoint = fromLonLat([sat.lng, sat.lat]);
+  const view = mapInstance.value.getView();
+  const zoom = 4;
+  if (window.innerWidth <= 640) {
+    await nextTick();
+    const topPad = (controlsEl.value?.offsetHeight ?? 280) + 20;
+    const resolution = view.getResolutionForZoom(zoom);
+    view.animate({ center: [satPoint[0], satPoint[1] + (topPad / 2) * resolution], zoom, duration: 1000 });
+  } else {
+    view.animate({ center: satPoint, zoom, duration: 1000 });
+  }
+}
 
 // Load satellites from file
 async function loadSatellites() {
@@ -214,48 +233,33 @@ async function loadSatellites() {
         );
         
         currentSatelliteFeature.value.setShowPath(showPath.value);
-        
-        // Initial update and get satellite position
+
+        // Draw coverage circle immediately — elevation not required for this
+        const satPosition = currentSatelliteFeature.value.getCurrentPosition();
         if (homeCoordinates.value && elevation.value !== null) {
-          const satInfo = currentSatelliteFeature.value.updatePosition(
+          satelliteInfo.value = currentSatelliteFeature.value.updatePosition(
             homeCoordinates.value,
             elevation.value + aglHeight.value
           );
-          satelliteInfo.value = satInfo;
-
-          // Get current satellite position and fit view
-          const satPosition = currentSatelliteFeature.value.getCurrentPosition();
-          const homePoint = fromLonLat([homeCoordinates.value.lon, homeCoordinates.value.lat]);
-          const satPoint = fromLonLat([satPosition.lng, satPosition.lat]);
-
-          if (mapInstance.value) {
-            const view = mapInstance.value.getView();
-            const minX = Math.min(homePoint[0], satPoint[0]);
-            const minY = Math.min(homePoint[1], satPoint[1]);
-            const maxX = Math.max(homePoint[0], satPoint[0]);
-            const maxY = Math.max(homePoint[1], satPoint[1]);
-            
-            const padding = [(maxX - minX) * 0.2, (maxY - minY) * 0.2];
-            const extent = [minX - padding[0], minY - padding[1], maxX + padding[0], maxY + padding[1]];
-            
-            view.fit(extent, {
-              duration: 1000,
-              padding: [50, 50, 50, 50]
-            });
-          }
-
-          // Start tracking with periodic updates
-          const updateInterval = window.setInterval(() => {
-            if (homeCoordinates.value && elevation.value !== null) {
-              satelliteInfo.value = currentSatelliteFeature.value?.updatePosition(
-                homeCoordinates.value,
-                elevation.value + aglHeight.value
-              ) || null;
-            }
-          }, 1000);
-          
-          currentSatelliteFeature.value.setUpdateInterval(updateInterval);
+        } else {
+          currentSatelliteFeature.value.updatePosition();
         }
+
+        // Wait for OL to paint the circle (two rAF cycles) before starting the zoom animation
+        await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        await fitViewForSatellite(satPosition);
+
+        // Start tracking with periodic updates
+        const updateInterval = window.setInterval(() => {
+          if (homeCoordinates.value && elevation.value !== null) {
+            satelliteInfo.value = currentSatelliteFeature.value?.updatePosition(
+              homeCoordinates.value,
+              elevation.value + aglHeight.value
+            ) || null;
+          }
+        }, 1000);
+
+        currentSatelliteFeature.value.setUpdateInterval(updateInterval);
         return;
       }
     }
@@ -756,38 +760,22 @@ watch(selectedSatellite, async (newSatellite) => {
       );
       
       currentSatelliteFeature.value.setShowPath(showPath.value);
-      
-      // Initial update and get satellite position
-      let satInfo = null;
+
+      // Draw coverage circle immediately — elevation not required for this
+      const satPosition = currentSatelliteFeature.value.getCurrentPosition();
       if (homeCoordinates.value && elevation.value !== null) {
-        satInfo = currentSatelliteFeature.value.updatePosition(
+        satelliteInfo.value = currentSatelliteFeature.value.updatePosition(
           homeCoordinates.value,
           elevation.value + aglHeight.value
         );
-        satelliteInfo.value = satInfo;
-
-        // Get current satellite position and fit view
-        const satPosition = currentSatelliteFeature.value.getCurrentPosition();
-        const homePoint = fromLonLat([homeCoordinates.value.lon, homeCoordinates.value.lat]);
-        const satPoint = fromLonLat([satPosition.lng, satPosition.lat]);
-
-        if (mapInstance.value) {
-          const view = mapInstance.value.getView();
-          const minX = Math.min(homePoint[0], satPoint[0]);
-          const minY = Math.min(homePoint[1], satPoint[1]);
-          const maxX = Math.max(homePoint[0], satPoint[0]);
-          const maxY = Math.max(homePoint[1], satPoint[1]);
-          
-          const padding = [(maxX - minX) * 0.2, (maxY - minY) * 0.2];
-          const extent = [minX - padding[0], minY - padding[1], maxX + padding[0], maxY + padding[1]];
-          
-          view.fit(extent, {
-            duration: 1000,
-            padding: [50, 50, 50, 50]
-          });
-        }
+      } else {
+        currentSatelliteFeature.value.updatePosition();
       }
-      
+
+      // Wait for OL to paint the circle (two rAF cycles) before starting the zoom animation
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      await fitViewForSatellite(satPosition);
+
       // Start tracking with periodic updates
       const updateInterval = window.setInterval(() => {
         if (homeCoordinates.value && elevation.value !== null) {
@@ -797,7 +785,7 @@ watch(selectedSatellite, async (newSatellite) => {
           ) || null;
         }
       }, 1000);
-      
+
       currentSatelliteFeature.value.setUpdateInterval(updateInterval);
     }
   } else {
@@ -979,7 +967,8 @@ onUnmounted(() => {
 .custom-controls {
   position: absolute;
   z-index: 1000;
-  
+  pointer-events: none;
+
   &.top-right {
     top: 10px;
     right: 10px;
@@ -990,11 +979,24 @@ onUnmounted(() => {
   }
 }
 
+.top-row-controls {
+  display: contents;
+}
+
 @media (max-width: 640px) {
   .custom-controls {
     &.top-right {
       width: calc(100% - 20px);
     }
+  }
+
+  .top-row-controls {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 4px;
+    pointer-events: none;
+    min-width: 0;
   }
 
   .ol-zoom {

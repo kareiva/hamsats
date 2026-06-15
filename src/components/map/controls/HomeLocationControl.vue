@@ -62,6 +62,7 @@ watch(() => props.aglHeight, (newValue) => {
   gap: 5px;
   background-color: rgba(255, 255, 255, 0.7);
   border-radius: 4px;
+  pointer-events: auto;
   padding: 8px;
   
   .control-header {
@@ -184,13 +185,18 @@ watch(() => props.aglHeight, (newValue) => {
 
 @media (max-width: 640px) {
   .home-location-control {
-    max-width: calc(100vw - 20px);
-    
+    padding: 5px;
+    flex-shrink: 0;
+
     .control-header {
-      flex-direction: column;
-      
       button {
-        width: 100%;
+        white-space: nowrap;
+        font-size: 12px;
+        padding: 6px;
+      }
+
+      .toggle-button {
+        display: none;
       }
     }
   }
