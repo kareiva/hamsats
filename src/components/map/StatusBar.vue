@@ -50,7 +50,7 @@ defineProps<{
   min-height: 30px;
   background-color: #f0f0f0;
   border-top: 1px solid #ccc;
-  padding: 5px 10px;
+  padding: 5px 10px calc(5px + env(safe-area-inset-bottom));
   font-family: monospace;
   font-size: 14px;
   
@@ -80,7 +80,7 @@ defineProps<{
 @media (max-width: 640px) {
   .status-bar {
     font-size: 12px;
-    padding: 4px 6px;
+    padding: 4px 6px calc(4px + env(safe-area-inset-bottom));
 
     .status-content {
       gap: 6px;
