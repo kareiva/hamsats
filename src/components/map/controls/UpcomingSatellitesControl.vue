@@ -40,7 +40,7 @@ const emit = defineEmits<{
   (e: 'select-satellite', name: string): void;
 }>();
 
-const expanded = ref(true);
+const expanded = ref(window.innerWidth > 640);
 const sortedSatellites = computed(() => {
   let satellites = [...props.upcomingSatellites];
   
