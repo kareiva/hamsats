@@ -185,12 +185,16 @@ watch(() => props.aglHeight, (newValue) => {
 @media (max-width: 640px) {
   .home-location-control {
     max-width: calc(100vw - 20px);
-    
+
     .control-header {
       flex-direction: column;
-      
+
       button {
         width: 100%;
+      }
+
+      .toggle-button {
+        display: none;
       }
     }
   }

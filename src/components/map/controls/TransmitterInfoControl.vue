@@ -198,7 +198,8 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
 
 @media (max-width: 640px) {
   .transmitter-info-control {
-    max-width: 100%;
+    width: 50vw;
+    max-width: 50vw;
   }
 }
 </style> 

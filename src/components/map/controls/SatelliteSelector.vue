@@ -1,5 +1,5 @@
 <template>
-  <div class="satellite-selector" v-if="homeCoordinates">
+  <div class="satellite-selector" v-if="homeCoordinates" :class="{ 'has-selection': selectedSatellite }">
     <div class="search-container">
       <input
         type="text"
@@ -338,6 +338,10 @@ watch(baofengMode, (newValue) => {
       .autocomplete-list {
         max-height: min(150px, 30vh);
       }
+    }
+
+    &.has-selection .baofeng-mode {
+      display: none;
     }
   }
 }
