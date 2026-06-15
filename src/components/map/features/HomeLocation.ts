@@ -5,6 +5,7 @@ import { Style, Icon, Fill } from 'ol/style';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import VectorSource from 'ol/source/Vector';
 import { calculateHorizonDistance } from '../utils/calculations';
+import { dishIconUri } from '../utils/icons';
 
 export interface HomeLocationCoordinates {
   lat: number;
@@ -28,11 +29,9 @@ export class HomeLocationFeature {
     this.homeFeature.setStyle(
       new Style({
         image: new Icon({
-          anchor: [0.5, 1],
-          anchorXUnits: 'fraction',
-          anchorYUnits: 'fraction',
-          src: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-          scale: 0.5
+          src: dishIconUri('#1565C0'),
+          scale: 1.5,
+          anchor: [0.5, 0.5],
         })
       })
     );
