@@ -2,19 +2,21 @@
   <div class="container">
     <div id="map" class="map-container">
       <div class="custom-controls top-right" ref="controlsEl">
-        <HomeLocationControl
-          :home-coordinates="homeCoordinates"
-          :agl-height="aglHeight"
-          @toggle-home="toggleHomeLocation"
-          @update:agl-height="updateAglHeight"
-        />
-        <SatelliteSelector
-          :home-coordinates="homeCoordinates"
-          :satellites="satellites"
-          v-model:selected-satellite="selectedSatellite"
-          v-model:show-path="showPath"
-          v-model:baofeng-mode="baofengMode"
-        />
+        <div class="top-row-controls">
+          <HomeLocationControl
+            :home-coordinates="homeCoordinates"
+            :agl-height="aglHeight"
+            @toggle-home="toggleHomeLocation"
+            @update:agl-height="updateAglHeight"
+          />
+          <SatelliteSelector
+            :home-coordinates="homeCoordinates"
+            :satellites="satellites"
+            v-model:selected-satellite="selectedSatellite"
+            v-model:show-path="showPath"
+            v-model:baofeng-mode="baofengMode"
+          />
+        </div>
         <TransmitterInfoControl
           v-if="selectedSatellite && selectedSatelliteCatalogNumber"
           :catalog-number="selectedSatelliteCatalogNumber"
@@ -977,11 +979,24 @@ onUnmounted(() => {
   }
 }
 
+.top-row-controls {
+  display: contents;
+}
+
 @media (max-width: 640px) {
   .custom-controls {
     &.top-right {
       width: calc(100% - 20px);
     }
+  }
+
+  .top-row-controls {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 4px;
+    pointer-events: none;
+    min-width: 0;
   }
 
   .ol-zoom {
