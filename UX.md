@@ -114,14 +114,6 @@ At `≤360px`, location and elevation are always hidden regardless of satellite 
 
 ## Section 2 — Style Unifications
 
-### 2.8 Unify responsive panel widths
-
-**Problem:** On mobile (`≤640px`), TransmitterInfoControl is `width: 50vw` while UpcomingSatellitesControl is `max-width: 100%` (full width). Since both appear in the same `top-right` flex column, they can be different widths within the same container — a jarring visual inconsistency.
-
-**Action:** On mobile, all panels in the top-right controls column take `width: 100%` relative to their container (which is already `calc(100% - 20px)` on mobile). The TransmitterInfoControl should match this. The 50vw constraint was a visual design choice that should be applied consistently to all panels or none.
-
----
-
 ### 2.9 Align the uplink/downlink color scheme with the primary palette
 
 **Problem:** The TransmitterInfoControl uses:

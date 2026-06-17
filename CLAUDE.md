@@ -114,6 +114,8 @@ Design tokens are defined as CSS custom properties on `:root` in `src/assets/bas
 
 **Panels** — all four overlay controls use `var(--color-panel-bg)` (rgba 255,255,255,0.92) and `var(--color-panel-shadow)` for their background and shadow. All panels share `z-index: 1000` — no panel is elevated above another.
 
+**Responsive widths** — on mobile (≤640px) all panels in the top-right column are `width: 100%` relative to their container. Never set a panel to `50vw` or any fixed viewport width on mobile.
+
 ### External APIs used at runtime
 
 - `https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle` — TLE data
