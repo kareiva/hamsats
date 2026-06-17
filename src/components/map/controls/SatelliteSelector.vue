@@ -1,5 +1,5 @@
 <template>
-  <div class="satellite-selector" v-if="homeCoordinates" :class="{ 'has-selection': selectedSatellite }">
+  <div class="satellite-selector" v-if="homeCoordinates" :class="{ 'has-selection': selectedSatellite, 'fm-active': baofengMode }">
     <div class="search-container">
       <input
         type="text"
@@ -32,6 +32,9 @@
           {{ sat.name }}{{ sat.distance !== undefined ? ` (${sat.distance.toFixed(0)} km)` : '' }}
         </div>
       </div>
+    </div>
+    <div v-if="baofengMode && !selectedSatellite" class="fm-active-badge">
+      FM filter ON
     </div>
     <div class="controls">
       <label class="control-item baofeng-mode">
@@ -306,6 +309,23 @@ watch(baofengMode, (newValue) => {
     }
   }
   
+  .fm-active-badge {
+    margin-top: var(--space-1);
+    font-size: var(--text-ui-sm-size);
+    font-weight: 600;
+    color: #7A4F00;
+    background-color: rgba(255, 160, 0, 0.15);
+    border: 1px solid rgba(255, 160, 0, 0.4);
+    border-radius: var(--radius-sm);
+    padding: 2px var(--space-2);
+    text-align: center;
+  }
+
+  &.fm-active .search-input {
+    border-color: rgba(255, 160, 0, 0.6);
+    background-color: rgba(255, 160, 0, 0.04);
+  }
+
   .controls {
     margin-top: var(--space-2);
     display: flex;

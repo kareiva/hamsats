@@ -4,17 +4,6 @@
 
 ## Section 1 — UX Workflow Improvements
 
-### 1.1 First-load with no home location is a dead end
-
-**Problem:** On first visit the only visible action is "Set Home Location". There is no map-level onboarding, no hint that the user can drag the map and click to place a marker manually, and no indication that geolocation is optional. If the browser denies location permission the UI silently falls back to the map center (0°, 0°) — the ocean — with no feedback.
-
-**Action:**
-- Show a subtle one-line banner above the button: *"Click the map to set your QTH, or use the button below."*
-- On geolocation denial, show a toast/inline notice: *"Location access denied — click anywhere on the map to set your position."*
-- Enable map-click-to-set-home even before the user clicks the button (click handler is always active but silent — surface it).
-
----
-
 ### 1.2 AGL height is hidden on mobile but still affects calculations
 
 **Problem:** The AGL toggle button (`+ AGL: 0m`) is hidden via CSS at `≤640px`. The AGL value persists in state and continues to influence satellite horizon calculations, but the user on mobile has no way to view or change it. This is a silent functional gap, not a deliberate simplification.
