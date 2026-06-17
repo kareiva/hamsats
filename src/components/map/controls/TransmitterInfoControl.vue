@@ -129,13 +129,13 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
   
   h3 {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--text-ui-size);
     font-weight: 600;
     color: #333;
   }
-  
+
   .toggle-icon {
-    font-size: 12px;
+    font-size: var(--text-ui-sm-size);
     color: #666;
   }
 }
@@ -148,39 +148,39 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
 .transmitter-item {
   padding: 8px 12px;
   border-bottom: 1px solid var(--color-divider);
-  
+
   &:last-child {
     border-bottom: none;
   }
-  
+
   .transmitter-description {
-    font-size: 13px;
-    font-weight: 500;
+    font-size: var(--text-ui-size);
+    font-weight: 400;
     margin-bottom: 4px;
   }
-  
+
   .transmitter-details {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    
+
     .frequency {
-      font-size: 12px;
+      font-size: var(--text-ui-sm-size);
       padding: 2px 6px;
       border-radius: var(--radius-sm);
-      
+
       &.uplink {
         background-color: rgba(0, 128, 0, 0.1);
         color: #006400;
       }
-      
+
       &.downlink {
         background-color: rgba(0, 0, 128, 0.1);
         color: #000064;
       }
-      
+
       .label {
-        font-weight: bold;
+        font-weight: 600;
         margin-right: 4px;
       }
     }

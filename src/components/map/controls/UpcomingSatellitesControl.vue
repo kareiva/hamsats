@@ -97,13 +97,13 @@ function formatVisibilityTime(date: Date): string {
   
   h3 {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--text-ui-size);
     font-weight: 600;
     color: #333;
   }
-  
+
   .toggle-icon {
-    font-size: 12px;
+    font-size: var(--text-ui-sm-size);
     color: #666;
   }
 }
@@ -125,7 +125,7 @@ function formatVisibilityTime(date: Date): string {
   
   .satellite-name {
     flex: 1;
-    font-size: 13px;
+    font-size: var(--text-ui-size);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -133,7 +133,7 @@ function formatVisibilityTime(date: Date): string {
   }
   
   .satellite-time {
-    font-size: 12px;
+    font-size: var(--text-ui-sm-size);
     color: #666;
     margin-right: 8px;
     white-space: nowrap;
@@ -145,7 +145,7 @@ function formatVisibilityTime(date: Date): string {
     border: none;
     border-radius: var(--radius-sm);
     padding: 4px 8px;
-    font-size: 12px;
+    font-size: var(--text-ui-sm-size);
     cursor: pointer;
 
     &:hover {
@@ -157,11 +157,11 @@ function formatVisibilityTime(date: Date): string {
 .fm-tag {
   background-color: #0078d4;
   color: white;
-  font-size: 10px;
+  font-size: var(--text-ui-sm-size);
   padding: 1px 4px;
   border-radius: var(--radius-sm);
   margin-right: 4px;
-  font-weight: bold;
+  font-weight: 600;
 }
 
 @media (max-width: 640px) {

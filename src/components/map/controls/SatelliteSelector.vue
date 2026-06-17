@@ -238,9 +238,9 @@ watch(baofengMode, (newValue) => {
       border-radius: var(--radius-md);
       border: 1px solid var(--color-border);
       background-color: white;
-      font-size: 14px;
+      font-size: var(--text-ui-size);
       color: #333;
-      
+
       &:focus {
         outline: none;
         border-color: var(--color-primary);
@@ -257,7 +257,7 @@ watch(baofengMode, (newValue) => {
       border: none;
       color: var(--color-danger-text);
       font-size: 24px;
-      font-weight: bold;
+      font-weight: 600;
       line-height: 1;
       padding: 0 5px;
       cursor: pointer;
@@ -283,7 +283,7 @@ watch(baofengMode, (newValue) => {
       .autocomplete-item {
         padding: 8px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: var(--text-ui-size);
         color: #333;
         
         &:hover {
@@ -316,8 +316,8 @@ watch(baofengMode, (newValue) => {
       align-items: center;
       gap: var(--space-2);
       cursor: pointer;
-      font-size: 14px;
-      
+      font-size: var(--text-ui-size);
+
       input[type="checkbox"] {
         cursor: pointer;
         width: 16px;
@@ -326,7 +326,7 @@ watch(baofengMode, (newValue) => {
       
       &.baofeng-mode {
         color: #2c3e50;
-        font-weight: 500;
+        font-weight: 400;
       }
     }
   }

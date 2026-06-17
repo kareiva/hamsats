@@ -73,8 +73,8 @@ watch(() => props.aglHeight, (newValue) => {
       color: white;
       border: none;
       border-radius: var(--radius-md);
-      padding: 8px;
-      font-size: 14px;
+      padding: var(--space-2);
+      font-size: var(--text-ui-size);
       cursor: pointer;
       white-space: nowrap;
       flex: 1;

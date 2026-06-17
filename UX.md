@@ -114,24 +114,6 @@ At `≤360px`, location and elevation are always hidden regardless of satellite 
 
 ## Section 2 — Style Unifications
 
-### 2.6 Define a clear typographic scale
-
-**Problem:** Font sizes 10px, 12px, 13px, 14px, 15px appear without a defined hierarchy. `font-weight` values of 500, 600, and `bold` are used interchangeably for labels and headings.
-
-**Action:** Define three text roles:
-
-| Role | Family | Size | Weight | Usage |
-|---|---|---|---|---|
-| `--text-ui` | system sans-serif | 14px | 400 | Button labels, list items, inputs |
-| `--text-ui-sm` | system sans-serif | 12px | 400 | Tags, frequency pills, error messages, mobile status |
-| `--text-heading` | system sans-serif | 14px | 600 | Panel headers (Transmitters, Upcoming Satellites) |
-| `--text-data` | monospace | 13px | 400 | StatusBar coordinates, distance, azimuth, elevation |
-| `--text-header` | monospace | 14px | 400 | HeaderBar site info and version |
-
-The key change: introduce `--text-data` (monospace 13px) as the explicit role for numeric/coordinate readouts in StatusBar, replacing the current 14px monospace which is the same size as the header bar and creates false visual equivalence.
-
----
-
 ### 2.7 Unify panel background opacity
 
 **Problem:** Control panels use two different white transparencies:

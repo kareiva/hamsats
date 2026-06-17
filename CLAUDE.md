@@ -110,6 +110,8 @@ Design tokens are defined as CSS custom properties on `:root` in `src/assets/bas
 
 **Border-radius** — `var(--radius-md)` (6px) for panels, buttons, and inputs; `var(--radius-sm)` (3px) for inline tags and compact pills. Never use raw `3px` or `4px`.
 
+**Typography** — use `var(--text-ui-size)` (14px) for all UI text; `var(--text-ui-sm-size)` (12px) for tags, secondary info, and mobile status; `var(--text-data-size)` (13px monospace) for StatusBar data readouts. Panel headings are always `font-weight: 600`; body text is `400`. Never use `font-weight: bold` or `font-weight: 500`.
+
 ### External APIs used at runtime
 
 - `https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle` — TLE data

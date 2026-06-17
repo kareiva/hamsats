@@ -52,7 +52,7 @@ defineProps<{
   border-top: 1px solid var(--color-border);
   padding: 5px 10px calc(5px + env(safe-area-inset-bottom, 0px));
   font-family: monospace;
-  font-size: 14px;
+  font-size: var(--text-data-size);
   
   .status-content {
     display: flex;
@@ -79,7 +79,7 @@ defineProps<{
 
 @media (max-width: 640px) {
   .status-bar {
-    font-size: 12px;
+    font-size: var(--text-ui-sm-size);
     padding: 4px 6px max(56px, env(safe-area-inset-bottom, 0px));
 
     .status-content {
