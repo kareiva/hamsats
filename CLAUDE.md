@@ -104,6 +104,8 @@ Design tokens are defined as CSS custom properties on `:root` in `src/assets/bas
 
 **Spacing** — use the 4-point scale tokens (`--space-1` 4px … `--space-5` 24px) for all gaps, margins between controls, and paddings. Do not introduce new raw pixel values for spacing.
 
+**Borders** — `var(--color-border)` (`#CCC`) for outer panel/input borders; `var(--color-divider)` (`#E8E8E8`) for internal list separators and track backgrounds. Never use raw `#ddd` or `#eee`.
+
 ### External APIs used at runtime
 
 - `https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle` — TLE data

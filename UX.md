@@ -114,21 +114,6 @@ At `≤360px`, location and elevation are always hidden regardless of satellite 
 
 ## Section 2 — Style Unifications
 
-### 2.3 Unify border and divider colors to two tokens
-
-**Problem:** Three gray shades are used for borders (`#ccc`, `#ddd`, `#eee`) across different components with no consistent rule for which to use. The result is subtle but visible — components next to each other have borders at different weights.
-
-**Action:**
-
-| Token | Value | Usage |
-|---|---|---|
-| `--color-border` | `#CCCCCC` | Outer borders (panels, inputs, status bar top) |
-| `--color-divider` | `#E8E8E8` | Internal separators (list item separators, slider track) |
-
-Remove `#ddd` entirely. Any current `#ddd` usage becomes either `--color-border` or `--color-divider` depending on context.
-
----
-
 ### 2.4 Unify error/destructive colors to one red
 
 **Problem:** Three different reds are used in the UI:

@@ -236,7 +236,7 @@ watch(baofengMode, (newValue) => {
       padding: 8px;
       padding-right: 30px;
       border-radius: 4px;
-      border: 1px solid #ccc;
+      border: 1px solid var(--color-border);
       background-color: white;
       font-size: 14px;
       color: #333;
@@ -275,7 +275,7 @@ watch(baofengMode, (newValue) => {
       max-height: min(200px, 40vh);
       overflow-y: auto;
       background-color: white;
-      border: 1px solid #ccc;
+      border: 1px solid var(--color-border);
       border-radius: 0 0 4px 4px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       z-index: 1000;

@@ -147,7 +147,7 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
 
 .transmitter-item {
   padding: 8px 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-divider);
   
   &:last-child {
     border-bottom: none;

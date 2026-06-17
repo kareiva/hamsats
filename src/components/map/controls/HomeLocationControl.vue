@@ -133,7 +133,7 @@ watch(() => props.aglHeight, (newValue) => {
 
         &::-webkit-slider-runnable-track {
           height: 4px;
-          background: #ddd;
+          background: var(--color-divider);
           border-radius: 2px;
         }
 
@@ -147,7 +147,7 @@ watch(() => props.aglHeight, (newValue) => {
         
         &::-moz-range-track {
           height: 4px;
-          background: #ddd;
+          background: var(--color-divider);
           border-radius: 2px;
         }
       }

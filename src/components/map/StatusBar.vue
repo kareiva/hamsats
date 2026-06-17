@@ -49,7 +49,7 @@ defineProps<{
 .status-bar {
   min-height: 30px;
   background-color: #f0f0f0;
-  border-top: 1px solid #ccc;
+  border-top: 1px solid var(--color-border);
   padding: 5px 10px calc(5px + env(safe-area-inset-bottom, 0px));
   font-family: monospace;
   font-size: 14px;
@@ -91,7 +91,7 @@ defineProps<{
         &.location {
           width: 100%;
           text-align: center;
-          border-bottom: 1px solid #ddd;
+          border-bottom: 1px solid var(--color-divider);
           padding-bottom: 3px;
           margin-bottom: 2px;
         }
@@ -119,7 +119,7 @@ defineProps<{
       .status-item {
         width: 100%;
         text-align: center;
-        border-bottom: 1px solid #ddd;
+        border-bottom: 1px solid var(--color-divider);
         padding-bottom: 2px;
         margin-bottom: 2px;
 
