@@ -8,6 +8,10 @@
         {{ showSlider ? '−' : '+' }} AGL: {{ aglHeight }}m
       </button>
     </div>
+    <p v-if="!homeCoordinates && !geoError" class="hint">
+      Tap the map to place your QTH, or use the button above.
+    </p>
+    <p v-if="geoError" class="geo-error">{{ geoError }}</p>
     <div v-if="homeCoordinates && showSlider" class="slider-container">
       <div class="vertical-slider-wrapper">
         <input 
@@ -36,6 +40,7 @@ import type { HomeLocationCoordinates } from '../features/HomeLocation';
 const props = defineProps<{
   homeCoordinates: HomeLocationCoordinates | null;
   aglHeight: number;
+  geoError: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -59,59 +64,59 @@ watch(() => props.aglHeight, (newValue) => {
 .home-location-control {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 4px;
-  pointer-events: auto;
-  padding: 8px;
-  
+  gap: var(--space-2);
+  background-color: var(--color-panel-bg);
+  border-radius: var(--radius-md);
+  box-shadow: var(--color-panel-shadow);
+  padding: var(--space-2);
+
   .control-header {
     display: flex;
-    gap: 5px;
+    gap: var(--space-2);
     
     button {
-      background-color: rgba(0, 60, 136, 0.7);
+      background-color: var(--color-primary);
       color: white;
       border: none;
-      border-radius: 4px;
-      padding: 8px;
-      font-size: 14px;
+      border-radius: var(--radius-md);
+      padding: var(--space-2);
+      font-size: var(--text-ui-size);
       cursor: pointer;
       white-space: nowrap;
       flex: 1;
-      
+
       &:hover {
-        background-color: rgba(0, 60, 136, 0.9);
+        background-color: var(--color-primary-hover);
       }
-      
+
       &.clear {
-        background-color: rgba(136, 0, 0, 0.7);
-        
+        background-color: var(--color-danger);
+
         &:hover {
-          background-color: rgba(136, 0, 0, 0.9);
+          background-color: var(--color-danger-hover);
         }
       }
-      
+
       &.toggle-button {
-        background-color: rgba(0, 60, 136, 0.5);
-        
+        background-color: var(--color-primary-dim);
+
         &:hover {
-          background-color: rgba(0, 60, 136, 0.7);
+          background-color: var(--color-primary-dim-hover);
         }
       }
     }
   }
   
   .slider-container {
-    margin-top: 5px;
-    
+    margin-top: var(--space-2);
+
     .vertical-slider-wrapper {
       display: flex;
       align-items: center;
       justify-content: center;
       height: 150px;
       position: relative;
-      margin: 10px auto;
+      margin: var(--space-2) auto;
       width: 100%;
       
       .vertical-slider {
@@ -126,29 +131,29 @@ watch(() => props.aglHeight, (newValue) => {
           height: 16px;
           width: 16px;
           border-radius: 50%;
-          background: rgba(0, 60, 136, 0.9);
+          background: var(--color-primary-hover);
           cursor: pointer;
           -webkit-appearance: none;
           margin-top: -6px;
         }
-        
+
         &::-webkit-slider-runnable-track {
           height: 4px;
-          background: #ddd;
+          background: var(--color-divider);
           border-radius: 2px;
         }
-        
+
         &::-moz-range-thumb {
           height: 16px;
           width: 16px;
           border-radius: 50%;
-          background: rgba(0, 60, 136, 0.9);
+          background: var(--color-primary-hover);
           cursor: pointer;
         }
         
         &::-moz-range-track {
           height: 4px;
-          background: #ddd;
+          background: var(--color-divider);
           border-radius: 2px;
         }
       }
@@ -180,6 +185,22 @@ watch(() => props.aglHeight, (newValue) => {
         }
       }
     }
+  }
+
+  .hint {
+    font-size: var(--text-ui-sm-size);
+    color: #666;
+    text-align: center;
+    padding: 0 var(--space-1);
+  }
+
+  .geo-error {
+    font-size: var(--text-ui-sm-size);
+    color: var(--color-danger-text);
+    background-color: var(--color-danger-bg);
+    border-radius: var(--radius-sm);
+    padding: var(--space-1) var(--space-2);
+    text-align: center;
   }
 }
 

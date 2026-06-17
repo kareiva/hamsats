@@ -12,6 +12,7 @@
         </div>
         <div class="satellite-time">
           {{ formatVisibilityTime(satellite.visibleAt) }}
+          <span v-if="satellite.closestDistance" class="satellite-dist">· {{ formatDistance(satellite.closestDistance) }}</span>
         </div>
         <button class="track-button" @click="selectSatellite(satellite.name)">
           Track
@@ -23,12 +24,14 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { formatDistance } from '../utils/format';
 
 interface UpcomingSatellite {
   name: string;
   tle: [string, string];
   visibleAt: Date;
   hasFM?: boolean;
+  closestDistance?: number;
 }
 
 const props = defineProps<{
@@ -78,14 +81,14 @@ function formatVisibilityTime(date: Date): string {
 
 <style lang="scss" scoped>
 .upcoming-satellites-control {
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  background-color: var(--color-panel-bg);
+  border-radius: var(--radius-md);
+  box-shadow: var(--color-panel-shadow);
   width: 100%;
   max-width: 300px;
   pointer-events: auto;
   overflow: hidden;
-  margin-top: 10px;
+  margin-top: var(--space-2);
 }
 
 .control-header {
@@ -98,13 +101,13 @@ function formatVisibilityTime(date: Date): string {
   
   h3 {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--text-ui-size);
     font-weight: 600;
     color: #333;
   }
-  
+
   .toggle-icon {
-    font-size: 12px;
+    font-size: var(--text-ui-sm-size);
     color: #666;
   }
 }
@@ -118,7 +121,7 @@ function formatVisibilityTime(date: Date): string {
   display: flex;
   align-items: center;
   padding: 8px 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-divider);
   
   &:last-child {
     border-bottom: none;
@@ -126,7 +129,7 @@ function formatVisibilityTime(date: Date): string {
   
   .satellite-name {
     flex: 1;
-    font-size: 13px;
+    font-size: var(--text-ui-size);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -134,35 +137,39 @@ function formatVisibilityTime(date: Date): string {
   }
   
   .satellite-time {
-    font-size: 12px;
+    font-size: var(--text-ui-sm-size);
     color: #666;
     margin-right: 8px;
     white-space: nowrap;
+
+    .satellite-dist {
+      color: #999;
+    }
   }
   
   .track-button {
-    background-color: #0078d4;
+    background-color: var(--color-primary);
     color: white;
     border: none;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     padding: 4px 8px;
-    font-size: 12px;
+    font-size: var(--text-ui-sm-size);
     cursor: pointer;
-    
+
     &:hover {
-      background-color: #0063b1;
+      background-color: var(--color-primary-hover);
     }
   }
 }
 
 .fm-tag {
-  background-color: #0078d4;
-  color: white;
-  font-size: 10px;
-  padding: 1px 4px;
-  border-radius: 3px;
-  margin-right: 4px;
-  font-weight: bold;
+  background-color: rgba(0, 60, 136, 0.15);
+  color: var(--color-primary);
+  font-size: var(--text-ui-sm-size);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  margin-right: var(--space-1);
+  font-weight: 600;
 }
 
 @media (max-width: 640px) {

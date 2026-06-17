@@ -1,3 +1,43 @@
+:root {
+  /* Blue palette */
+  --color-primary:          #003C88;
+  --color-primary-hover:    #002D66;
+  --color-primary-dim:      rgba(0, 60, 136, 0.5);
+  --color-primary-dim-hover:rgba(0, 60, 136, 0.7);
+  --color-primary-tint:     rgba(0, 60, 136, 0.1);
+  --color-primary-focus:    rgba(0, 60, 136, 0.3);
+
+  /* Danger palette */
+  --color-danger:           #8B0000;
+  --color-danger-hover:     #6B0000;
+  --color-danger-text:      #8B0000;
+  --color-danger-bg:        rgba(139, 0, 0, 0.08);
+
+  /* Spacing scale (4-point) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  /* Borders */
+  --color-border:   #CCCCCC;
+  --color-divider:  #E8E8E8;
+
+  /* Border radius */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+
+  /* Panel */
+  --color-panel-bg:     rgba(255, 255, 255, 0.92);
+  --color-panel-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+
+  /* Typography */
+  --text-ui-size:    14px;
+  --text-ui-sm-size: 12px;
+  --text-data-size:  13px;
+}
+
 *,
 *::before,
 *::after {

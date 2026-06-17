@@ -2,21 +2,20 @@
   <div class="container">
     <div id="map" class="map-container">
       <div class="custom-controls top-right" ref="controlsEl">
-        <div class="top-row-controls">
-          <HomeLocationControl
-            :home-coordinates="homeCoordinates"
-            :agl-height="aglHeight"
-            @toggle-home="toggleHomeLocation"
-            @update:agl-height="updateAglHeight"
-          />
-          <SatelliteSelector
-            :home-coordinates="homeCoordinates"
-            :satellites="satellites"
-            v-model:selected-satellite="selectedSatellite"
-            v-model:show-path="showPath"
-            v-model:baofeng-mode="baofengMode"
-          />
-        </div>
+        <HomeLocationControl
+          :home-coordinates="homeCoordinates"
+          :agl-height="aglHeight"
+          :geo-error="geoError"
+          @toggle-home="toggleHomeLocation"
+          @update:agl-height="updateAglHeight"
+        />
+        <SatelliteSelector
+          :home-coordinates="homeCoordinates"
+          :satellites="satellites"
+          v-model:selected-satellite="selectedSatellite"
+          v-model:show-path="showPath"
+          v-model:baofeng-mode="baofengMode"
+        />
         <TransmitterInfoControl
           v-if="selectedSatellite && selectedSatelliteCatalogNumber"
           :catalog-number="selectedSatelliteCatalogNumber"
@@ -74,6 +73,7 @@ const currentSatelliteFeature = ref<SatelliteFeature | null>(null);
 const nearestSatellitesFeature = ref<NearestSatellitesFeature | null>(null);
 const upcomingVisibleSatellites = ref<UpcomingSatellite[]>([]);
 const fmSatellitesLookup = ref<Record<string, boolean>>({});
+const geoError = ref<string | null>(null);
 let upcomingPredictionInterval: number | null = null;
 
 const controlsEl = ref<HTMLElement | null>(null);
@@ -356,8 +356,10 @@ async function updateSatelliteDistances(satelliteList: typeof satellites.value) 
     return a.distance - b.distance;
   });
 
-  // Update nearest satellites feature
-  if (nearestSatellitesFeature.value) {
+  // Update nearest satellites feature — only when no satellite is selected;
+  // selecting a satellite calls stopTracking() but keeps the object alive,
+  // and this function runs on every distance recalculation tick.
+  if (nearestSatellitesFeature.value && !selectedSatellite.value) {
     let nearestSats = satelliteList.slice(0, baofengMode.value ? 50 : 5); // Get more satellites if in Baofeng mode to filter
 
     if (baofengMode.value) {
@@ -433,30 +435,29 @@ function requestGeolocation() {
   if ('geolocation' in navigator) {
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        geoError.value = null;
         const coords = {
           lat: position.coords.latitude,
           lon: position.coords.longitude
         };
         homeCoordinates.value = coords;
-        
-        // Update the home location feature
+
         if (homeLocationFeature) {
           homeLocationFeature.setLocation(coords);
         }
-        
-        // Center the map on the location
+
         if (mapInstance.value) {
           const point = fromLonLat([coords.lon, coords.lat]);
           mapInstance.value.getView().setCenter(point);
           mapInstance.value.getView().setZoom(8);
         }
-        
+
         saveSetting('homeLocation', coords);
         fetchElevation(coords.lat, coords.lon);
       },
       (error) => {
         console.error('Error getting geolocation:', error);
-        setHomeLocationFromMap(); // Fallback to map center if geolocation fails
+        geoError.value = 'Location access denied — tap the map to set your position.';
       },
       {
         enableHighAccuracy: true,
@@ -522,6 +523,7 @@ interface UpcomingSatellite {
   visibleAt: Date;
   catalogNumber?: string;
   hasFM?: boolean;
+  closestDistance?: number;
 }
 
 interface SatelliteWithName {
@@ -605,15 +607,26 @@ async function predictUpcomingVisibleSatellites(): Promise<UpcomingSatellite[]> 
         }
       }
 
-      if (found && nextVisibleTime > now.getTime()) {  // Only add if visibility time is in the future
+      if (found && nextVisibleTime > now.getTime()) {
         const hasFM = sat.catalogNumber ? fmSatellitesLookup.value[sat.catalogNumber] || false : false;
+        const aosPosition = getLatLngObj(sat.tle, nextVisibleTime);
+        const aosSatInfo = getSatelliteInfo(sat.tle, nextVisibleTime);
+        const aosInfo = calculateSatelliteInfo(
+          homeCoordinates.value.lat,
+          homeCoordinates.value.lon,
+          homeCoordinates.value.elevation || 0,
+          aosPosition.lat,
+          aosPosition.lng,
+          aosSatInfo.height
+        );
 
         upcomingSats.push({
           name: sat.name,
           tle: sat.tle,
           visibleAt: new Date(nextVisibleTime),
           catalogNumber: sat.catalogNumber,
-          hasFM
+          hasFM,
+          closestDistance: aosInfo.distance
         });
       }
     } catch (e) {
@@ -738,7 +751,6 @@ watch(selectedSatellite, async (newSatellite) => {
   // First, clean up the old satellite and its features
   if (currentSatelliteFeature.value) {
     currentSatelliteFeature.value.stopTracking();
-    currentSatelliteFeature.value.remove();
     currentSatelliteFeature.value = null;
   }
 
@@ -890,12 +902,24 @@ onMounted(async () => {
   });
   
   mapInstance.value.addInteraction(translate);
-  
+
   translate.on('translateend', () => {
     const coordinates = homeLocationFeature.getCoordinates();
     if (coordinates) {
       homeCoordinates.value = coordinates;
     }
+  });
+
+  // Allow clicking the map to place the home pin when none is set yet
+  mapInstance.value.on('singleclick', (event) => {
+    if (homeCoordinates.value) return;
+    const lonLat = toLonLat(event.coordinate);
+    const coords = { lon: lonLat[0], lat: lonLat[1] };
+    homeCoordinates.value = coords;
+    homeLocationFeature.setLocation(coords);
+    saveSetting('homeLocation', coords);
+    fetchElevation(coords.lat, coords.lon);
+    geoError.value = null;
   });
 
   // Load saved home location
@@ -974,7 +998,7 @@ onUnmounted(() => {
     right: 10px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: var(--space-2);
     max-width: calc(100% - 20px);
   }
 }
@@ -1026,12 +1050,12 @@ onUnmounted(() => {
 .ol-control {
   position: absolute;
   background-color: rgba(255, 255, 255, 0.4);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   padding: 2px;
   z-index: 1000;
   
   button {
-    background-color: rgba(0, 60, 136, 0.7);
+    background-color: var(--color-primary);
     color: white;
     border: none;
     border-radius: 2px;
@@ -1043,9 +1067,9 @@ onUnmounted(() => {
     padding: 0.5em;
     text-align: center;
     width: 1.375em;
-    
+
     &:hover {
-      background-color: rgba(0, 60, 136, 0.9);
+      background-color: var(--color-primary-hover);
       cursor: pointer;
     }
   }
@@ -1061,7 +1085,7 @@ onUnmounted(() => {
   left: 10px !important;
   
   .ol-zoom-in {
-    border-radius: 4px 4px 0 0;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
   
   .ol-zoom-out {
@@ -1073,7 +1097,7 @@ onUnmounted(() => {
   right: 10px !important;
   
   button {
-    border-radius: 4px;
+    border-radius: var(--radius-md);
   }
 }
 

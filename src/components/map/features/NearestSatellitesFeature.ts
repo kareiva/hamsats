@@ -5,6 +5,7 @@ import { fromLonLat } from 'ol/proj';
 import VectorSource from 'ol/source/Vector';
 import { getLatLngObj } from 'tle.js';
 import { satelliteIconUri, arrowIconUri, calculateBearing } from '../utils/icons';
+import { formatDistance } from '../utils/format';
 import type { Map as OlMap } from 'ol';
 
 export interface NearestSatellite {
@@ -75,7 +76,7 @@ export class NearestSatellitesFeature {
       });
 
       const distanceText = satellite.distance
-        ? ` (${satellite.distance.toFixed(0)}km)`
+        ? ` (${formatDistance(satellite.distance)})`
         : '';
 
       const futurePos = getLatLngObj(satellite.tle, now + 30000);

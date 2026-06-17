@@ -378,24 +378,21 @@ export class SatelliteFeature {
   }
 
   public remove() {
-    // Remove all features from their respective sources
-    if (this.satelliteFeature) {
-      this.vectorSource.removeFeature(this.satelliteFeature);
-    }
-    if (this.arrowFeature) {
-      this.vectorSource.removeFeature(this.arrowFeature);
-    }
-    if (this.horizonFeature) {
-      this.vectorSource.removeFeature(this.horizonFeature);
-    }
-    if (this.lineOfSightFeature) {
-      this.lineSource.removeFeature(this.lineOfSightFeature);
-    }
-    if (this.satelliteToPathLine) {
-      this.vectorSource.removeFeature(this.satelliteToPathLine);
-    }
-    
-    // Clear all path features
+    this.satelliteFeature.setGeometry(undefined);
+    this.vectorSource.removeFeature(this.satelliteFeature);
+
+    this.arrowFeature.setGeometry(undefined);
+    this.vectorSource.removeFeature(this.arrowFeature);
+
+    this.horizonFeature.setGeometry(undefined);
+    this.vectorSource.removeFeature(this.horizonFeature);
+
+    this.lineOfSightFeature.setGeometry(undefined);
+    this.lineSource.removeFeature(this.lineOfSightFeature);
+
+    this.satelliteToPathLine.setGeometry(undefined);
+    this.vectorSource.removeFeature(this.satelliteToPathLine);
+
     this.clearPath();
   }
 } 

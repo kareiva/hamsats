@@ -1,5 +1,5 @@
 <template>
-  <div class="satellite-selector" v-if="homeCoordinates" :class="{ 'has-selection': selectedSatellite }">
+  <div class="satellite-selector" v-if="homeCoordinates" :class="{ 'has-selection': selectedSatellite, 'fm-active': baofengMode }">
     <div class="search-container">
       <input
         type="text"
@@ -29,11 +29,11 @@
           }"
           @click="selectSatellite(sat.name)"
         >
-          {{ sat.name }}{{ sat.distance !== undefined ? ` (${sat.distance.toFixed(0)} km)` : '' }}
+          {{ sat.name }}{{ sat.distance !== undefined ? ` (${formatDistance(sat.distance)})` : '' }}
         </div>
       </div>
     </div>
-    <div class="controls">
+    <div class="controls" v-if="!selectedSatellite">
       <label class="control-item baofeng-mode">
         <input type="checkbox" v-model="baofengMode"> Baofeng (FM) mode
       </label>
@@ -42,6 +42,7 @@
       <label class="control-item">
         <input type="checkbox" v-model="localShowPath"> Show future path
       </label>
+      <button class="share-button" @click="shareUrl">{{ copied ? 'Copied!' : 'Share' }}</button>
     </div>
   </div>
 </template>
@@ -49,6 +50,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import type { HomeLocationCoordinates } from '../features/HomeLocation';
+import { formatDistance } from '../utils/format';
 
 interface SatelliteWithName {
   name: string;
@@ -78,6 +80,14 @@ const localShowPath = ref(props.showPath);
 const highlightedIndex = ref(-1);
 const baofengMode = ref(props.baofengMode);
 const filteredResults = ref<SatelliteWithName[]>([]);
+const copied = ref(false);
+
+function shareUrl() {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    copied.value = true;
+    setTimeout(() => { copied.value = false; }, 2000);
+  });
+}
 
 // Cache for FM satellite status
 const fmSatelliteCache = new Map<string, boolean>();
@@ -221,10 +231,11 @@ watch(baofengMode, (newValue) => {
 
 <style lang="scss" scoped>
 .satellite-selector {
-  margin-top: 10px;
-  background-color: rgba(255, 255, 255, 0.7);
-  padding: 8px;
-  border-radius: 4px;
+  margin-top: var(--space-2);
+  background-color: var(--color-panel-bg);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  box-shadow: var(--color-panel-shadow);
   max-width: calc(100vw - 20px);
   pointer-events: auto;
   
@@ -236,16 +247,16 @@ watch(baofengMode, (newValue) => {
       width: 100%;
       padding: 8px;
       padding-right: 30px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
       background-color: white;
-      font-size: 14px;
+      font-size: var(--text-ui-size);
       color: #333;
-      
+
       &:focus {
         outline: none;
-        border-color: rgba(0, 60, 136, 0.7);
-        box-shadow: 0 0 0 2px rgba(0, 60, 136, 0.3);
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 2px var(--color-primary-focus);
       }
     }
 
@@ -256,15 +267,15 @@ watch(baofengMode, (newValue) => {
       transform: translateY(-50%);
       background: none;
       border: none;
-      color: #dc3545;
+      color: var(--color-danger-text);
       font-size: 24px;
-      font-weight: bold;
+      font-weight: 600;
       line-height: 1;
       padding: 0 5px;
       cursor: pointer;
-      
+
       &:hover {
-        color: #c82333;
+        color: var(--color-danger-hover);
       }
     }
     
@@ -276,15 +287,15 @@ watch(baofengMode, (newValue) => {
       max-height: min(200px, 40vh);
       overflow-y: auto;
       background-color: white;
-      border: 1px solid #ccc;
-      border-radius: 0 0 4px 4px;
+      border: 1px solid var(--color-border);
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       z-index: 1000;
       
       .autocomplete-item {
         padding: 8px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: var(--text-ui-size);
         color: #333;
         
         &:hover {
@@ -306,28 +317,59 @@ watch(baofengMode, (newValue) => {
     }
   }
   
+  .fm-active-badge {
+    margin-top: var(--space-1);
+    font-size: var(--text-ui-sm-size);
+    font-weight: 600;
+    color: #7A4F00;
+    background-color: rgba(255, 160, 0, 0.15);
+    border: 1px solid rgba(255, 160, 0, 0.4);
+    border-radius: var(--radius-sm);
+    padding: 2px var(--space-2);
+    text-align: center;
+  }
+
+  &.fm-active .search-input {
+    border-color: rgba(255, 160, 0, 0.6);
+    background-color: rgba(255, 160, 0, 0.04);
+  }
+
   .controls {
-    margin-top: 8px;
+    margin-top: var(--space-2);
     display: flex;
     align-items: center;
-    justify-content: center;
-    
+    justify-content: space-between;
+
     .control-item {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: var(--space-2);
       cursor: pointer;
-      font-size: 14px;
-      
+      font-size: var(--text-ui-size);
+
       input[type="checkbox"] {
         cursor: pointer;
         width: 16px;
         height: 16px;
       }
-      
+
       &.baofeng-mode {
         color: #2c3e50;
-        font-weight: 500;
+        font-weight: 400;
+      }
+    }
+
+    .share-button {
+      background-color: var(--color-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 3px var(--space-2);
+      font-size: var(--text-ui-size);
+      cursor: pointer;
+
+      &:hover {
+        background-color: var(--color-primary-hover);
       }
     }
   }
