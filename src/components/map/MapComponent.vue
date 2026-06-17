@@ -5,6 +5,7 @@
         <HomeLocationControl
           :home-coordinates="homeCoordinates"
           :agl-height="aglHeight"
+          :geo-error="geoError"
           @toggle-home="toggleHomeLocation"
           @update:agl-height="updateAglHeight"
         />
@@ -72,6 +73,7 @@ const currentSatelliteFeature = ref<SatelliteFeature | null>(null);
 const nearestSatellitesFeature = ref<NearestSatellitesFeature | null>(null);
 const upcomingVisibleSatellites = ref<UpcomingSatellite[]>([]);
 const fmSatellitesLookup = ref<Record<string, boolean>>({});
+const geoError = ref<string | null>(null);
 let upcomingPredictionInterval: number | null = null;
 
 const controlsEl = ref<HTMLElement | null>(null);
@@ -431,30 +433,29 @@ function requestGeolocation() {
   if ('geolocation' in navigator) {
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        geoError.value = null;
         const coords = {
           lat: position.coords.latitude,
           lon: position.coords.longitude
         };
         homeCoordinates.value = coords;
-        
-        // Update the home location feature
+
         if (homeLocationFeature) {
           homeLocationFeature.setLocation(coords);
         }
-        
-        // Center the map on the location
+
         if (mapInstance.value) {
           const point = fromLonLat([coords.lon, coords.lat]);
           mapInstance.value.getView().setCenter(point);
           mapInstance.value.getView().setZoom(8);
         }
-        
+
         saveSetting('homeLocation', coords);
         fetchElevation(coords.lat, coords.lon);
       },
       (error) => {
         console.error('Error getting geolocation:', error);
-        setHomeLocationFromMap(); // Fallback to map center if geolocation fails
+        geoError.value = 'Location access denied — tap the map to set your position.';
       },
       {
         enableHighAccuracy: true,
@@ -888,12 +889,24 @@ onMounted(async () => {
   });
   
   mapInstance.value.addInteraction(translate);
-  
+
   translate.on('translateend', () => {
     const coordinates = homeLocationFeature.getCoordinates();
     if (coordinates) {
       homeCoordinates.value = coordinates;
     }
+  });
+
+  // Allow clicking the map to place the home pin when none is set yet
+  mapInstance.value.on('singleclick', (event) => {
+    if (homeCoordinates.value) return;
+    const lonLat = toLonLat(event.coordinate);
+    const coords = { lon: lonLat[0], lat: lonLat[1] };
+    homeCoordinates.value = coords;
+    homeLocationFeature.setLocation(coords);
+    saveSetting('homeLocation', coords);
+    fetchElevation(coords.lat, coords.lon);
+    geoError.value = null;
   });
 
   // Load saved home location

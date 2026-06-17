@@ -8,6 +8,10 @@
         {{ showSlider ? '−' : '+' }} AGL: {{ aglHeight }}m
       </button>
     </div>
+    <p v-if="!homeCoordinates && !geoError" class="hint">
+      Tap the map to place your QTH, or use the button above.
+    </p>
+    <p v-if="geoError" class="geo-error">{{ geoError }}</p>
     <div v-if="homeCoordinates && showSlider" class="slider-container">
       <div class="vertical-slider-wrapper">
         <input 
@@ -36,6 +40,7 @@ import type { HomeLocationCoordinates } from '../features/HomeLocation';
 const props = defineProps<{
   homeCoordinates: HomeLocationCoordinates | null;
   aglHeight: number;
+  geoError: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -180,6 +185,22 @@ watch(() => props.aglHeight, (newValue) => {
         }
       }
     }
+  }
+
+  .hint {
+    font-size: var(--text-ui-sm-size);
+    color: #666;
+    text-align: center;
+    padding: 0 var(--space-1);
+  }
+
+  .geo-error {
+    font-size: var(--text-ui-sm-size);
+    color: var(--color-danger-text);
+    background-color: var(--color-danger-bg);
+    border-radius: var(--radius-sm);
+    padding: var(--space-1) var(--space-2);
+    text-align: center;
   }
 }
 
