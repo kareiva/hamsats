@@ -231,6 +231,7 @@ watch(baofengMode, (newValue) => {
   border-radius: var(--radius-md);
   box-shadow: var(--color-panel-shadow);
   max-width: calc(100vw - 20px);
+  pointer-events: auto;
   
   .search-container {
     position: relative;
@@ -356,10 +357,25 @@ watch(baofengMode, (newValue) => {
 
 @media (max-width: 640px) {
   .satellite-selector {
+    margin-top: 0;
+    padding: 5px;
+    flex: 1;
+    min-width: 0;
+
     .search-container {
+      .search-input {
+        font-size: 12px;
+        padding: 6px;
+        padding-right: 28px;
+      }
+
       .autocomplete-list {
         max-height: min(150px, 30vh);
       }
+    }
+
+    .controls {
+      margin-top: 4px;
     }
 
     &.has-selection .baofeng-mode {

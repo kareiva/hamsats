@@ -206,13 +206,14 @@ watch(() => props.aglHeight, (newValue) => {
 
 @media (max-width: 640px) {
   .home-location-control {
-    max-width: calc(100vw - 20px);
+    padding: 5px;
+    flex-shrink: 0;
 
     .control-header {
-      flex-direction: column;
-
       button {
-        width: 100%;
+        white-space: nowrap;
+        font-size: 12px;
+        padding: 6px;
       }
 
       .toggle-button {

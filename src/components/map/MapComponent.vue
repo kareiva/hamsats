@@ -991,7 +991,8 @@ onUnmounted(() => {
 .custom-controls {
   position: absolute;
   z-index: 1000;
-  
+  pointer-events: none;
+
   &.top-right {
     top: 10px;
     right: 10px;
@@ -1002,11 +1003,24 @@ onUnmounted(() => {
   }
 }
 
+.top-row-controls {
+  display: contents;
+}
+
 @media (max-width: 640px) {
   .custom-controls {
     &.top-right {
       width: calc(100% - 20px);
     }
+  }
+
+  .top-row-controls {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 4px;
+    pointer-events: none;
+    min-width: 0;
   }
 
   .ol-zoom {
