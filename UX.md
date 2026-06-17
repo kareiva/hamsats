@@ -45,21 +45,6 @@
 
 ---
 
-### 1.7 Distance is shown inconsistently across panels
-
-**Problem:** Satellite distance appears in three places with different formatting:
-- Autocomplete dropdown: `FUNCUBE-1 (AO-73) (1234 km)` — appended to the name, no label
-- StatusBar: `Distance: 1234.1km` — label + value, monospace
-- NearestSatellitesFeature map label: `FUNCUBE-1 (AO-73) (1234km)` — on-map text
-
-There is no distance shown in the UpcomingSatellitesControl or TransmitterInfoControl, and the formatting (decimal places, unit spacing, label presence) differs across all occurrences.
-
-**Action:**
-- Standardize distance display as `1 234 km` (no decimal, thousands separator, space before unit).
-- Add distance-at-AOS to upcoming satellite list rows (e.g., *"max elevation 32°"* or *"~1 200 km at closest"*), replacing or supplementing the countdown-only display.
-
----
-
 ### 1.8 No feedback while upcoming passes are being computed
 
 **Problem:** `predictUpcomingVisibleSatellites()` iterates over all satellites with 30-second intervals over a 24-hour window — a computationally heavy operation. On slow devices it can take multiple seconds. The UpcomingSatellitesControl renders nothing during this time with no loading indicator.
