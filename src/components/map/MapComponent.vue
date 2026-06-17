@@ -356,8 +356,10 @@ async function updateSatelliteDistances(satelliteList: typeof satellites.value) 
     return a.distance - b.distance;
   });
 
-  // Update nearest satellites feature
-  if (nearestSatellitesFeature.value) {
+  // Update nearest satellites feature — only when no satellite is selected;
+  // selecting a satellite calls stopTracking() but keeps the object alive,
+  // and this function runs on every distance recalculation tick.
+  if (nearestSatellitesFeature.value && !selectedSatellite.value) {
     let nearestSats = satelliteList.slice(0, baofengMode.value ? 50 : 5); // Get more satellites if in Baofeng mode to filter
 
     if (baofengMode.value) {
