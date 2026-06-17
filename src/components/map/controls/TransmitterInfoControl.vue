@@ -110,15 +110,13 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
 
 <style lang="scss" scoped>
 .transmitter-info-control {
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  background-color: var(--color-panel-bg);
+  border-radius: var(--radius-md);
+  box-shadow: var(--color-panel-shadow);
   width: 100%;
   max-width: 300px;
   overflow: hidden;
-  margin-top: 10px;
-  z-index: 1010;
-  pointer-events: auto;
+  margin-top: var(--space-2);
 }
 
 .control-header {
@@ -131,13 +129,13 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
   
   h3 {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--text-ui-size);
     font-weight: 600;
     color: #333;
   }
-  
+
   .toggle-icon {
-    font-size: 12px;
+    font-size: var(--text-ui-sm-size);
     color: #666;
   }
 }
@@ -149,40 +147,40 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
 
 .transmitter-item {
   padding: 8px 12px;
-  border-bottom: 1px solid #eee;
-  
+  border-bottom: 1px solid var(--color-divider);
+
   &:last-child {
     border-bottom: none;
   }
-  
+
   .transmitter-description {
-    font-size: 13px;
-    font-weight: 500;
+    font-size: var(--text-ui-size);
+    font-weight: 400;
     margin-bottom: 4px;
   }
-  
+
   .transmitter-details {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    
+
     .frequency {
-      font-size: 12px;
+      font-size: var(--text-ui-sm-size);
       padding: 2px 6px;
-      border-radius: 3px;
-      
+      border-radius: var(--radius-sm);
+
       &.uplink {
-        background-color: rgba(0, 128, 0, 0.1);
-        color: #006400;
+        background-color: rgba(0, 60, 136, 0.08);
+        color: var(--color-primary);
       }
-      
+
       &.downlink {
-        background-color: rgba(0, 0, 128, 0.1);
-        color: #000064;
+        background-color: rgba(0, 100, 0, 0.08);
+        color: #004D00;
       }
-      
+
       .label {
-        font-weight: bold;
+        font-weight: 600;
         margin-right: 4px;
       }
     }
@@ -190,18 +188,17 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
 }
 
 .error-message {
-  padding: 8px 12px;
-  font-size: 12px;
-  color: #721c24;
-  background-color: #f8d7da;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-ui-sm-size);
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-bg);
   text-align: center;
 }
 
 @media (max-width: 640px) {
   .transmitter-info-control {
-    width: 50vw;
-    max-width: 50vw;
-    align-self: flex-end;
+    width: 100%;
+    max-width: 100%;
   }
 }
 </style> 
