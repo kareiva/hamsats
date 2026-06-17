@@ -12,6 +12,7 @@
         </div>
         <div class="satellite-time">
           {{ formatVisibilityTime(satellite.visibleAt) }}
+          <span v-if="satellite.closestDistance" class="satellite-dist">· {{ formatDistance(satellite.closestDistance) }}</span>
         </div>
         <button class="track-button" @click="selectSatellite(satellite.name)">
           Track
@@ -23,12 +24,14 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { formatDistance } from '../utils/format';
 
 interface UpcomingSatellite {
   name: string;
   tle: [string, string];
   visibleAt: Date;
   hasFM?: boolean;
+  closestDistance?: number;
 }
 
 const props = defineProps<{
@@ -137,6 +140,10 @@ function formatVisibilityTime(date: Date): string {
     color: #666;
     margin-right: 8px;
     white-space: nowrap;
+
+    .satellite-dist {
+      color: #999;
+    }
   }
   
   .track-button {

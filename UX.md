@@ -14,16 +14,6 @@
 
 ---
 
-### 1.3 Baofeng (FM) mode gives no persistent visual cue
-
-**Problem:** When Baofeng mode is active, the satellite list is silently filtered. The only indication is the checked checkbox. If the panel scrolls or the user forgets, they may be confused by missing satellites in search and upcoming passes.
-
-**Action:**
-- Add a small persistent badge in the SatelliteSelector header when the mode is active: *"FM filter ON"* in amber.
-- Change the border or background of the search input to a tinted color while filtering is active, matching the FM badge used in UpcomingSatellitesControl.
-
----
-
 ### 1.4 TransmitterInfoControl and UpcomingSatellitesControl have inconsistent default expand state
 
 **Problem:** TransmitterInfoControl is always expanded on load (`expanded = true`). UpcomingSatellitesControl is conditionally expanded only if `window.innerWidth > 640`. There is no documented reason for the asymmetry. On desktop both open, stacking tall on the right side. On mobile TransmitterInfo is open but UpcomingSatellites is closed — the opposite of what makes sense (passes are more useful than transmitter frequencies on a small screen).

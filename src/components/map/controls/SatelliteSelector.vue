@@ -29,7 +29,7 @@
           }"
           @click="selectSatellite(sat.name)"
         >
-          {{ sat.name }}{{ sat.distance !== undefined ? ` (${sat.distance.toFixed(0)} km)` : '' }}
+          {{ sat.name }}{{ sat.distance !== undefined ? ` (${formatDistance(sat.distance)})` : '' }}
         </div>
       </div>
     </div>
@@ -52,6 +52,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import type { HomeLocationCoordinates } from '../features/HomeLocation';
+import { formatDistance } from '../utils/format';
 
 interface SatelliteWithName {
   name: string;

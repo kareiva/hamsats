@@ -521,6 +521,7 @@ interface UpcomingSatellite {
   visibleAt: Date;
   catalogNumber?: string;
   hasFM?: boolean;
+  closestDistance?: number;
 }
 
 interface SatelliteWithName {
@@ -604,15 +605,26 @@ async function predictUpcomingVisibleSatellites(): Promise<UpcomingSatellite[]> 
         }
       }
 
-      if (found && nextVisibleTime > now.getTime()) {  // Only add if visibility time is in the future
+      if (found && nextVisibleTime > now.getTime()) {
         const hasFM = sat.catalogNumber ? fmSatellitesLookup.value[sat.catalogNumber] || false : false;
+        const aosPosition = getLatLngObj(sat.tle, nextVisibleTime);
+        const aosSatInfo = getSatelliteInfo(sat.tle, nextVisibleTime);
+        const aosInfo = calculateSatelliteInfo(
+          homeCoordinates.value.lat,
+          homeCoordinates.value.lon,
+          homeCoordinates.value.elevation || 0,
+          aosPosition.lat,
+          aosPosition.lng,
+          aosSatInfo.height
+        );
 
         upcomingSats.push({
           name: sat.name,
           tle: sat.tle,
           visibleAt: new Date(nextVisibleTime),
           catalogNumber: sat.catalogNumber,
-          hasFM
+          hasFM,
+          closestDistance: aosInfo.distance
         });
       }
     } catch (e) {
