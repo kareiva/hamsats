@@ -57,7 +57,7 @@ defineProps<{
   .status-content {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: var(--space-2);
     justify-content: center;
     align-items: center;
     
@@ -83,7 +83,7 @@ defineProps<{
     padding: 4px 6px max(56px, env(safe-area-inset-bottom, 0px));
 
     .status-content {
-      gap: 6px;
+      gap: var(--space-1);
 
       .status-item {
         padding: 1px 3px;

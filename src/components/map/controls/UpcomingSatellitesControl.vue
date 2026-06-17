@@ -84,7 +84,7 @@ function formatVisibilityTime(date: Date): string {
   width: 100%;
   max-width: 300px;
   overflow: hidden;
-  margin-top: 10px;
+  margin-top: var(--space-2);
 }
 
 .control-header {

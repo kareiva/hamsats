@@ -59,14 +59,14 @@ watch(() => props.aglHeight, (newValue) => {
 .home-location-control {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--space-2);
   background-color: rgba(255, 255, 255, 0.7);
   border-radius: 4px;
-  padding: 8px;
-  
+  padding: var(--space-2);
+
   .control-header {
     display: flex;
-    gap: 5px;
+    gap: var(--space-2);
     
     button {
       background-color: var(--color-primary);
@@ -102,15 +102,15 @@ watch(() => props.aglHeight, (newValue) => {
   }
   
   .slider-container {
-    margin-top: 5px;
-    
+    margin-top: var(--space-2);
+
     .vertical-slider-wrapper {
       display: flex;
       align-items: center;
       justify-content: center;
       height: 150px;
       position: relative;
-      margin: 10px auto;
+      margin: var(--space-2) auto;
       width: 100%;
       
       .vertical-slider {

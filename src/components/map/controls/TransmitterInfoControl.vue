@@ -116,8 +116,7 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
   width: 100%;
   max-width: 300px;
   overflow: hidden;
-  margin-top: 10px;
-  z-index: 1010;
+  margin-top: var(--space-2);
 }
 
 .control-header {

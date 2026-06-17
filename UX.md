@@ -114,27 +114,6 @@ At `≤360px`, location and elevation are always hidden regardless of satellite 
 
 ## Section 2 — Style Unifications
 
-### 2.2 Establish a 4-point spacing scale
-
-**Problem:** The UI uses spacing values of 1px, 2px, 3px, 4px, 5px, 6px, 8px, 10px, 12px, 15px, 18px, 20px without any pattern. Adjacent controls have different gaps for no apparent reason (e.g., custom controls gap is `5px`, but status content gap is `10px` on desktop and `6px` on mobile).
-
-**Action:** Use a strict 4-point scale:
-
-| Token | Value |
-|---|---|
-| `--space-1` | `4px` |
-| `--space-2` | `8px` |
-| `--space-3` | `12px` |
-| `--space-4` | `16px` |
-| `--space-5` | `24px` |
-
-- All button padding: `--space-2` (8px) all sides, or `--space-1 --space-2` (4px 8px) for compact buttons.
-- All panel padding: `--space-2 --space-3` (8px 12px).
-- Gap between stacked control panels: `--space-2` (8px), up from the current 5px.
-- Status bar item gap: `--space-2` (8px) desktop, `--space-1` (4px) mobile.
-
----
-
 ### 2.3 Unify border and divider colors to two tokens
 
 **Problem:** Three gray shades are used for borders (`#ccc`, `#ddd`, `#eee`) across different components with no consistent rule for which to use. The result is subtle but visible — components next to each other have borders at different weights.

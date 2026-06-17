@@ -102,6 +102,8 @@ Design tokens are defined as CSS custom properties on `:root` in `src/assets/bas
 
 **Blue palette** — use `var(--color-primary)` (`#003C88`) for all interactive buttons. `var(--color-primary-hover)` (`#002D66`) for hover. `var(--color-primary-dim)` for secondary/toggle buttons. Never use `#0078d4` or ad-hoc `rgba(0,60,136,…)` — those were the old values this token replaces.
 
+**Spacing** — use the 4-point scale tokens (`--space-1` 4px … `--space-5` 24px) for all gaps, margins between controls, and paddings. Do not introduce new raw pixel values for spacing.
+
 ### External APIs used at runtime
 
 - `https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle` — TLE data

@@ -221,9 +221,9 @@ watch(baofengMode, (newValue) => {
 
 <style lang="scss" scoped>
 .satellite-selector {
-  margin-top: 10px;
+  margin-top: var(--space-2);
   background-color: rgba(255, 255, 255, 0.7);
-  padding: 8px;
+  padding: var(--space-2);
   border-radius: 4px;
   max-width: calc(100vw - 20px);
   
@@ -306,15 +306,15 @@ watch(baofengMode, (newValue) => {
   }
   
   .controls {
-    margin-top: 8px;
+    margin-top: var(--space-2);
     display: flex;
     align-items: center;
     justify-content: center;
-    
+
     .control-item {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: var(--space-2);
       cursor: pointer;
       font-size: 14px;
       
