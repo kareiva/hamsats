@@ -79,7 +79,7 @@ function formatVisibilityTime(date: Date): string {
 <style lang="scss" scoped>
 .upcoming-satellites-control {
   background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   width: 100%;
   max-width: 300px;
@@ -143,7 +143,7 @@ function formatVisibilityTime(date: Date): string {
     background-color: var(--color-primary);
     color: white;
     border: none;
-    border-radius: 3px;
+    border-radius: var(--radius-sm);
     padding: 4px 8px;
     font-size: 12px;
     cursor: pointer;
@@ -159,7 +159,7 @@ function formatVisibilityTime(date: Date): string {
   color: white;
   font-size: 10px;
   padding: 1px 4px;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   margin-right: 4px;
   font-weight: bold;
 }

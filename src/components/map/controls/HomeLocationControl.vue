@@ -61,7 +61,7 @@ watch(() => props.aglHeight, (newValue) => {
   flex-direction: column;
   gap: var(--space-2);
   background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   padding: var(--space-2);
 
   .control-header {
@@ -72,7 +72,7 @@ watch(() => props.aglHeight, (newValue) => {
       background-color: var(--color-primary);
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: var(--radius-md);
       padding: 8px;
       font-size: 14px;
       cursor: pointer;

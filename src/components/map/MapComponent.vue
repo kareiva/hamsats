@@ -1010,7 +1010,7 @@ onUnmounted(() => {
 .ol-control {
   position: absolute;
   background-color: rgba(255, 255, 255, 0.4);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   padding: 2px;
   z-index: 1000;
   
@@ -1045,7 +1045,7 @@ onUnmounted(() => {
   left: 10px !important;
   
   .ol-zoom-in {
-    border-radius: 4px 4px 0 0;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
   
   .ol-zoom-out {
@@ -1057,7 +1057,7 @@ onUnmounted(() => {
   right: 10px !important;
   
   button {
-    border-radius: 4px;
+    border-radius: var(--radius-md);
   }
 }
 

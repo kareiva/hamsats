@@ -108,6 +108,8 @@ Design tokens are defined as CSS custom properties on `:root` in `src/assets/bas
 
 **Danger/destructive** — `var(--color-danger)` (`#8B0000`) for destructive button backgrounds; `var(--color-danger-text)` for the X clear button and error text; `var(--color-danger-bg)` for error message backgrounds. Never use `#dc3545`, `#721c24`, or `#f8d7da`.
 
+**Border-radius** — `var(--radius-md)` (6px) for panels, buttons, and inputs; `var(--radius-sm)` (3px) for inline tags and compact pills. Never use raw `3px` or `4px`.
+
 ### External APIs used at runtime
 
 - `https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle` — TLE data

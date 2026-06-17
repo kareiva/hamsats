@@ -111,7 +111,7 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
 <style lang="scss" scoped>
 .transmitter-info-control {
   background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   width: 100%;
   max-width: 300px;
@@ -167,7 +167,7 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
     .frequency {
       font-size: 12px;
       padding: 2px 6px;
-      border-radius: 3px;
+      border-radius: var(--radius-sm);
       
       &.uplink {
         background-color: rgba(0, 128, 0, 0.1);

@@ -114,21 +114,6 @@ At `≤360px`, location and elevation are always hidden regardless of satellite 
 
 ## Section 2 — Style Unifications
 
-### 2.5 Standardize border-radius to two values
-
-**Problem:** Border radii of 2px, 3px, 4px, and 50% appear throughout the UI. The 3px vs 4px distinction (Track button vs panel) is imperceptible but adds maintenance cost.
-
-**Action:**
-
-| Token | Value | Usage |
-|---|---|---|
-| `--radius-sm` | `3px` | Tags (FM badge), frequency pills, compact inline elements |
-| `--radius-md` | `6px` | Panels, buttons, inputs, dropdowns, map controls |
-
-Replace all 4px panel radii with `--radius-md` (6px) for a slightly softer, more modern feel. The 2px used on slider tracks stays as-is (not a `border-radius` candidate for the token system).
-
----
-
 ### 2.6 Define a clear typographic scale
 
 **Problem:** Font sizes 10px, 12px, 13px, 14px, 15px appear without a defined hierarchy. `font-weight` values of 500, 600, and `bold` are used interchangeably for labels and headings.

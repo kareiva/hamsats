@@ -224,7 +224,7 @@ watch(baofengMode, (newValue) => {
   margin-top: var(--space-2);
   background-color: rgba(255, 255, 255, 0.7);
   padding: var(--space-2);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   max-width: calc(100vw - 20px);
   
   .search-container {
@@ -235,7 +235,7 @@ watch(baofengMode, (newValue) => {
       width: 100%;
       padding: 8px;
       padding-right: 30px;
-      border-radius: 4px;
+      border-radius: var(--radius-md);
       border: 1px solid var(--color-border);
       background-color: white;
       font-size: 14px;
@@ -276,7 +276,7 @@ watch(baofengMode, (newValue) => {
       overflow-y: auto;
       background-color: white;
       border: 1px solid var(--color-border);
-      border-radius: 0 0 4px 4px;
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       z-index: 1000;
       
