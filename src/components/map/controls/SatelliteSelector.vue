@@ -12,12 +12,11 @@
         @keydown.up.prevent="navigateResults(-1)"
         @keydown.enter.prevent="selectHighlighted"
       />
-      <button 
-        v-if="selectedSatellite" 
-        class="clear-button"
+      <button
+        v-if="selectedSatellite"
+        class="unselect-button"
         @click="clearSelection"
-        title="Clear selection"
-      >×</button>
+      >Unselect</button>
       <div class="autocomplete-list" v-if="showAutocomplete && filteredSatellites.length > 0">
         <div
           v-for="(sat, index) in filteredSatellites"
@@ -246,7 +245,7 @@ watch(baofengMode, (newValue) => {
     .search-input {
       width: 100%;
       padding: 8px;
-      padding-right: 30px;
+      padding-right: 74px;
       border-radius: var(--radius-md);
       border: 1px solid var(--color-border);
       background-color: white;
@@ -260,22 +259,21 @@ watch(baofengMode, (newValue) => {
       }
     }
 
-    .clear-button {
+    .unselect-button {
       position: absolute;
       right: 8px;
       top: 50%;
       transform: translateY(-50%);
-      background: none;
+      background-color: var(--color-danger);
+      color: white;
       border: none;
-      color: var(--color-danger-text);
-      font-size: 24px;
-      font-weight: 600;
-      line-height: 1;
-      padding: 0 5px;
+      border-radius: var(--radius-sm);
+      padding: 3px var(--space-2);
+      font-size: var(--text-ui-sm-size);
       cursor: pointer;
 
       &:hover {
-        color: var(--color-danger-hover);
+        background-color: var(--color-danger-hover);
       }
     }
     
