@@ -33,10 +33,7 @@
         </div>
       </div>
     </div>
-    <div v-if="baofengMode && !selectedSatellite" class="fm-active-badge">
-      FM filter ON
-    </div>
-    <div class="controls">
+    <div class="controls" v-if="!selectedSatellite">
       <label class="control-item baofeng-mode">
         <input type="checkbox" v-model="baofengMode"> Baofeng (FM) mode
       </label>
@@ -45,6 +42,7 @@
       <label class="control-item">
         <input type="checkbox" v-model="localShowPath"> Show future path
       </label>
+      <button class="share-button" @click="shareUrl">{{ copied ? 'Copied!' : 'Share' }}</button>
     </div>
   </div>
 </template>
@@ -82,6 +80,14 @@ const localShowPath = ref(props.showPath);
 const highlightedIndex = ref(-1);
 const baofengMode = ref(props.baofengMode);
 const filteredResults = ref<SatelliteWithName[]>([]);
+const copied = ref(false);
+
+function shareUrl() {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    copied.value = true;
+    setTimeout(() => { copied.value = false; }, 2000);
+  });
+}
 
 // Cache for FM satellite status
 const fmSatelliteCache = new Map<string, boolean>();
@@ -332,7 +338,7 @@ watch(baofengMode, (newValue) => {
     margin-top: var(--space-2);
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
 
     .control-item {
       display: flex;
@@ -346,10 +352,24 @@ watch(baofengMode, (newValue) => {
         width: 16px;
         height: 16px;
       }
-      
+
       &.baofeng-mode {
         color: #2c3e50;
         font-weight: 400;
+      }
+    }
+
+    .share-button {
+      background-color: var(--color-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 3px var(--space-2);
+      font-size: var(--text-ui-size);
+      cursor: pointer;
+
+      &:hover {
+        background-color: var(--color-primary-hover);
       }
     }
   }
