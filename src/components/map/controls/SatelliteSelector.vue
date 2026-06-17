@@ -243,8 +243,8 @@ watch(baofengMode, (newValue) => {
       
       &:focus {
         outline: none;
-        border-color: rgba(0, 60, 136, 0.7);
-        box-shadow: 0 0 0 2px rgba(0, 60, 136, 0.3);
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 2px var(--color-primary-focus);
       }
     }
 

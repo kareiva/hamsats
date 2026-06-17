@@ -1015,7 +1015,7 @@ onUnmounted(() => {
   z-index: 1000;
   
   button {
-    background-color: rgba(0, 60, 136, 0.7);
+    background-color: var(--color-primary);
     color: white;
     border: none;
     border-radius: 2px;
@@ -1027,9 +1027,9 @@ onUnmounted(() => {
     padding: 0.5em;
     text-align: center;
     width: 1.375em;
-    
+
     &:hover {
-      background-color: rgba(0, 60, 136, 0.9);
+      background-color: var(--color-primary-hover);
       cursor: pointer;
     }
   }

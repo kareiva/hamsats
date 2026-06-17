@@ -140,16 +140,16 @@ function formatVisibilityTime(date: Date): string {
   }
   
   .track-button {
-    background-color: #0078d4;
+    background-color: var(--color-primary);
     color: white;
     border: none;
     border-radius: 3px;
     padding: 4px 8px;
     font-size: 12px;
     cursor: pointer;
-    
+
     &:hover {
-      background-color: #0063b1;
+      background-color: var(--color-primary-hover);
     }
   }
 }

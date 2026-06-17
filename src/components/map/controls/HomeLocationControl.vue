@@ -69,7 +69,7 @@ watch(() => props.aglHeight, (newValue) => {
     gap: 5px;
     
     button {
-      background-color: rgba(0, 60, 136, 0.7);
+      background-color: var(--color-primary);
       color: white;
       border: none;
       border-radius: 4px;
@@ -78,24 +78,24 @@ watch(() => props.aglHeight, (newValue) => {
       cursor: pointer;
       white-space: nowrap;
       flex: 1;
-      
+
       &:hover {
-        background-color: rgba(0, 60, 136, 0.9);
+        background-color: var(--color-primary-hover);
       }
-      
+
       &.clear {
         background-color: rgba(136, 0, 0, 0.7);
-        
+
         &:hover {
           background-color: rgba(136, 0, 0, 0.9);
         }
       }
-      
+
       &.toggle-button {
-        background-color: rgba(0, 60, 136, 0.5);
-        
+        background-color: var(--color-primary-dim);
+
         &:hover {
-          background-color: rgba(0, 60, 136, 0.7);
+          background-color: var(--color-primary-dim-hover);
         }
       }
     }
@@ -125,23 +125,23 @@ watch(() => props.aglHeight, (newValue) => {
           height: 16px;
           width: 16px;
           border-radius: 50%;
-          background: rgba(0, 60, 136, 0.9);
+          background: var(--color-primary-hover);
           cursor: pointer;
           -webkit-appearance: none;
           margin-top: -6px;
         }
-        
+
         &::-webkit-slider-runnable-track {
           height: 4px;
           background: #ddd;
           border-radius: 2px;
         }
-        
+
         &::-moz-range-thumb {
           height: 16px;
           width: 16px;
           border-radius: 50%;
-          background: rgba(0, 60, 136, 0.9);
+          background: var(--color-primary-hover);
           cursor: pointer;
         }
         
