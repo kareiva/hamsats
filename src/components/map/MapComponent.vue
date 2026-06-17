@@ -751,7 +751,6 @@ watch(selectedSatellite, async (newSatellite) => {
   // First, clean up the old satellite and its features
   if (currentSatelliteFeature.value) {
     currentSatelliteFeature.value.stopTracking();
-    currentSatelliteFeature.value.remove();
     currentSatelliteFeature.value = null;
   }
 
