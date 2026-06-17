@@ -118,6 +118,8 @@ Design tokens are defined as CSS custom properties on `:root` in `src/assets/bas
 
 **Transmitter frequency colors** — uplink uses primary-blue tint (`rgba(0,60,136,0.08)` bg, `var(--color-primary)` text); downlink uses green tint (`rgba(0,100,0,0.08)` bg, `#004D00` text). The semantic distinction (TX vs RX) is blue vs green — no other color families.
 
+**FM tag** — tinted inline tag: `rgba(0,60,136,0.15)` background, `var(--color-primary)` text, `--text-ui-sm-size`, `--radius-sm`, `padding: 2px 6px`. Never use a solid-filled badge or the old `#0078d4` color for this tag.
+
 ### External APIs used at runtime
 
 - `https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle` — TLE data

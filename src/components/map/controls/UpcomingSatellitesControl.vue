@@ -155,12 +155,12 @@ function formatVisibilityTime(date: Date): string {
 }
 
 .fm-tag {
-  background-color: #0078d4;
-  color: white;
+  background-color: rgba(0, 60, 136, 0.15);
+  color: var(--color-primary);
   font-size: var(--text-ui-sm-size);
-  padding: 1px 4px;
+  padding: 2px 6px;
   border-radius: var(--radius-sm);
-  margin-right: 4px;
+  margin-right: var(--space-1);
   font-weight: 600;
 }
 

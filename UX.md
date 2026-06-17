@@ -114,18 +114,3 @@ At `≤360px`, location and elevation are always hidden regardless of satellite 
 
 ## Section 2 — Style Unifications
 
-### 2.10 Make the FM tag consistent across contexts
-
-**Problem:** The FM badge appears in UpcomingSatellitesControl with a specific style (`#0078d4` background, white text, 10px font, 3px radius). This is the only place the `#0078d4` blue appears — it was the Track button color now orphaned as the sole usage of that color.
-
-**Action:** After unifying the primary button color (§2.1), the FM tag becomes:
-
-```
-background: --color-primary (rgba(0,60,136,0.15))
-color: --color-primary (#003C88)
-font-size: --text-ui-sm (12px)
-border-radius: --radius-sm (3px)
-padding: 2px 6px
-```
-
-This shifts it from a filled solid badge to a tinted inline tag, consistent with the frequency pill style in TransmitterInfoControl, and removes the last usage of `#0078d4`.
