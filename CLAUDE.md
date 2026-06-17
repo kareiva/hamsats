@@ -116,6 +116,8 @@ Design tokens are defined as CSS custom properties on `:root` in `src/assets/bas
 
 **Responsive widths** — on mobile (≤640px) all panels in the top-right column are `width: 100%` relative to their container. Never set a panel to `50vw` or any fixed viewport width on mobile.
 
+**Transmitter frequency colors** — uplink uses primary-blue tint (`rgba(0,60,136,0.08)` bg, `var(--color-primary)` text); downlink uses green tint (`rgba(0,100,0,0.08)` bg, `#004D00` text). The semantic distinction (TX vs RX) is blue vs green — no other color families.
+
 ### External APIs used at runtime
 
 - `https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle` — TLE data

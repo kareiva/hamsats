@@ -114,25 +114,6 @@ At `≤360px`, location and elevation are always hidden regardless of satellite 
 
 ## Section 2 — Style Unifications
 
-### 2.9 Align the uplink/downlink color scheme with the primary palette
-
-**Problem:** The TransmitterInfoControl uses:
-- Uplink: `#006400` on `rgba(0,128,0,0.1)` (dark green on light green)
-- Downlink: `#000064` on `rgba(0,0,128,0.1)` (dark blue on light blue)
-
-These are independent accent colors that don't relate to any other color in the UI. The downlink blue is navy but a different navy than `rgba(0,60,136)`.
-
-**Action:** Reuse semantic color from the existing accent palette:
-
-| Frequency type | Background | Text | Label |
-|---|---|---|---|
-| Uplink (↑) | `rgba(0, 60, 136, 0.08)` | `#003C88` | Arrow + "UP" |
-| Downlink (↓) | `rgba(0, 100, 0, 0.08)` | `#004D00` | Arrow + "DN" |
-
-The uplink adopts the primary blue family. Downlink keeps green to maintain semantic distinction (receive vs transmit). This reduces the total number of accent colors from 4 to 2.
-
----
-
 ### 2.10 Make the FM tag consistent across contexts
 
 **Problem:** The FM badge appears in UpcomingSatellitesControl with a specific style (`#0078d4` background, white text, 10px font, 3px radius). This is the only place the `#0078d4` blue appears — it was the Track button color now orphaned as the sole usage of that color.

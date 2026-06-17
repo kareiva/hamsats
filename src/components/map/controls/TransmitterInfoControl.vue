@@ -170,13 +170,13 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
       border-radius: var(--radius-sm);
 
       &.uplink {
-        background-color: rgba(0, 128, 0, 0.1);
-        color: #006400;
+        background-color: rgba(0, 60, 136, 0.08);
+        color: var(--color-primary);
       }
 
       &.downlink {
-        background-color: rgba(0, 0, 128, 0.1);
-        color: #000064;
+        background-color: rgba(0, 100, 0, 0.08);
+        color: #004D00;
       }
 
       .label {
