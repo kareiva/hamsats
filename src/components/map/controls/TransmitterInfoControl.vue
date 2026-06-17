@@ -188,10 +188,10 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
 }
 
 .error-message {
-  padding: 8px 12px;
-  font-size: 12px;
-  color: #721c24;
-  background-color: #f8d7da;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-ui-sm-size);
+  color: var(--color-danger-text);
+  background-color: var(--color-danger-bg);
   text-align: center;
 }
 

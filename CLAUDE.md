@@ -106,6 +106,8 @@ Design tokens are defined as CSS custom properties on `:root` in `src/assets/bas
 
 **Borders** — `var(--color-border)` (`#CCC`) for outer panel/input borders; `var(--color-divider)` (`#E8E8E8`) for internal list separators and track backgrounds. Never use raw `#ddd` or `#eee`.
 
+**Danger/destructive** — `var(--color-danger)` (`#8B0000`) for destructive button backgrounds; `var(--color-danger-text)` for the X clear button and error text; `var(--color-danger-bg)` for error message backgrounds. Never use `#dc3545`, `#721c24`, or `#f8d7da`.
+
 ### External APIs used at runtime
 
 - `https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle` — TLE data

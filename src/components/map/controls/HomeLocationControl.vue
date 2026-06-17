@@ -84,10 +84,10 @@ watch(() => props.aglHeight, (newValue) => {
       }
 
       &.clear {
-        background-color: rgba(136, 0, 0, 0.7);
+        background-color: var(--color-danger);
 
         &:hover {
-          background-color: rgba(136, 0, 0, 0.9);
+          background-color: var(--color-danger-hover);
         }
       }
 

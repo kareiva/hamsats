@@ -114,26 +114,6 @@ At `≤360px`, location and elevation are always hidden regardless of satellite 
 
 ## Section 2 — Style Unifications
 
-### 2.4 Unify error/destructive colors to one red
-
-**Problem:** Three different reds are used in the UI:
-- `rgba(136, 0, 0, 0.7)` — "Clear Home Location" button
-- `#dc3545` / `#c82333` — Clear satellite (X) button
-- `#721c24` / `#f8d7da` — Transmitter error message (Bootstrap palette)
-
-**Action:** Use a single destructive red token:
-
-| Token | Value | Usage |
-|---|---|---|
-| `--color-danger` | `#8B0000` | "Clear Home" button background |
-| `--color-danger-hover` | `#6B0000` | "Clear Home" button hover |
-| `--color-danger-text` | `#8B0000` | X button text color, error message text |
-| `--color-danger-bg` | `rgba(139, 0, 0, 0.08)` | Error message background |
-
-The X clear button changes from #dc3545 to `--color-danger-text`. The transmitter error message background changes from Bootstrap-derived `#f8d7da` to `--color-danger-bg`.
-
----
-
 ### 2.5 Standardize border-radius to two values
 
 **Problem:** Border radii of 2px, 3px, 4px, and 50% appear throughout the UI. The 3px vs 4px distinction (Track button vs panel) is imperceptible but adds maintenance cost.

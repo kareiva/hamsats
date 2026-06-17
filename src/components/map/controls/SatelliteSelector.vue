@@ -255,15 +255,15 @@ watch(baofengMode, (newValue) => {
       transform: translateY(-50%);
       background: none;
       border: none;
-      color: #dc3545;
+      color: var(--color-danger-text);
       font-size: 24px;
       font-weight: bold;
       line-height: 1;
       padding: 0 5px;
       cursor: pointer;
-      
+
       &:hover {
-        color: #c82333;
+        color: var(--color-danger-hover);
       }
     }
     
