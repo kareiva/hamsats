@@ -112,6 +112,8 @@ Design tokens are defined as CSS custom properties on `:root` in `src/assets/bas
 
 **Typography** — use `var(--text-ui-size)` (14px) for all UI text; `var(--text-ui-sm-size)` (12px) for tags, secondary info, and mobile status; `var(--text-data-size)` (13px monospace) for StatusBar data readouts. Panel headings are always `font-weight: 600`; body text is `400`. Never use `font-weight: bold` or `font-weight: 500`.
 
+**Panels** — all four overlay controls use `var(--color-panel-bg)` (rgba 255,255,255,0.92) and `var(--color-panel-shadow)` for their background and shadow. All panels share `z-index: 1000` — no panel is elevated above another.
+
 ### External APIs used at runtime
 
 - `https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle` — TLE data

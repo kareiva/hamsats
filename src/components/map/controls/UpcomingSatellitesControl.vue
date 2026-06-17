@@ -78,9 +78,9 @@ function formatVisibilityTime(date: Date): string {
 
 <style lang="scss" scoped>
 .upcoming-satellites-control {
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: var(--color-panel-bg);
   border-radius: var(--radius-md);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--color-panel-shadow);
   width: 100%;
   max-width: 300px;
   overflow: hidden;

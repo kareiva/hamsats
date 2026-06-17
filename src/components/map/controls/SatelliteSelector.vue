@@ -222,9 +222,10 @@ watch(baofengMode, (newValue) => {
 <style lang="scss" scoped>
 .satellite-selector {
   margin-top: var(--space-2);
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: var(--color-panel-bg);
   padding: var(--space-2);
   border-radius: var(--radius-md);
+  box-shadow: var(--color-panel-shadow);
   max-width: calc(100vw - 20px);
   
   .search-container {

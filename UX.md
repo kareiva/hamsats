@@ -114,25 +114,6 @@ At `≤360px`, location and elevation are always hidden regardless of satellite 
 
 ## Section 2 — Style Unifications
 
-### 2.7 Unify panel background opacity
-
-**Problem:** Control panels use two different white transparencies:
-- `rgba(255, 255, 255, 0.7)` — HomeLocationControl, SatelliteSelector
-- `rgba(255, 255, 255, 0.9)` — TransmitterInfoControl, UpcomingSatellitesControl
-
-This creates a visible hierarchy where some panels look more "floating" and others more solid, but the hierarchy does not correspond to any priority difference.
-
-**Action:** Use a single panel background token:
-
-| Token | Value | Usage |
-|---|---|---|
-| `--color-panel-bg` | `rgba(255, 255, 255, 0.92)` | All control panel backgrounds |
-| `--color-panel-shadow` | `0 2px 8px rgba(0,0,0,0.18)` | All panels with elevation |
-
-All four overlay controls get the same background and the same box-shadow. The `z-index: 1010` on TransmitterInfoControl should align with the other controls at `z-index: 1000` — there is no reason for it to be higher.
-
----
-
 ### 2.8 Unify responsive panel widths
 
 **Problem:** On mobile (`≤640px`), TransmitterInfoControl is `width: 50vw` while UpcomingSatellitesControl is `max-width: 100%` (full width). Since both appear in the same `top-right` flex column, they can be different widths within the same container — a jarring visual inconsistency.

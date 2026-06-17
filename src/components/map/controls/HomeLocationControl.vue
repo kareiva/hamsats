@@ -60,8 +60,9 @@ watch(() => props.aglHeight, (newValue) => {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: var(--color-panel-bg);
   border-radius: var(--radius-md);
+  box-shadow: var(--color-panel-shadow);
   padding: var(--space-2);
 
   .control-header {
