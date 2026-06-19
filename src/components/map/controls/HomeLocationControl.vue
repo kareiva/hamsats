@@ -64,6 +64,7 @@ watch(() => props.aglHeight, (newValue) => {
 .home-location-control {
   display: flex;
   flex-direction: column;
+  pointer-events: auto;
   gap: var(--space-2);
   background-color: var(--color-panel-bg);
   border-radius: var(--radius-md);
