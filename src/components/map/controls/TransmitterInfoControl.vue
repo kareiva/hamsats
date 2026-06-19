@@ -114,6 +114,7 @@ watch(() => props.catalogNumber, (newCatalogNumber) => {
   border-radius: var(--radius-md);
   box-shadow: var(--color-panel-shadow);
   width: 100%;
+  pointer-events: auto;
   max-width: 300px;
   overflow: hidden;
   margin-top: var(--space-2);

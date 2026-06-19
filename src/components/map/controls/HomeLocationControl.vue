@@ -5,7 +5,7 @@
         {{ homeCoordinates ? 'Clear Home Location' : 'Set Home Location' }}
       </button>
       <button v-if="homeCoordinates" @click="showSlider = !showSlider" class="toggle-button">
-        {{ showSlider ? '−' : '+' }} AGL: {{ aglHeight }}m
+        AGL: {{ aglHeight }}m {{ showSlider ? '▲' : '▼' }}
       </button>
     </div>
     <p v-if="!homeCoordinates && !geoError" class="hint">
@@ -64,6 +64,7 @@ watch(() => props.aglHeight, (newValue) => {
 .home-location-control {
   display: flex;
   flex-direction: column;
+  pointer-events: auto;
   gap: var(--space-2);
   background-color: var(--color-panel-bg);
   border-radius: var(--radius-md);
