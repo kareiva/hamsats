@@ -1,23 +1,27 @@
 <template>
   <div class="satellite-selector" v-if="homeCoordinates" :class="{ 'has-selection': selectedSatellite, 'fm-active': baofengMode }">
     <div class="search-container">
-      <input
-        type="text"
-        class="search-input"
-        placeholder="Search satellites..."
-        v-model="searchQuery"
-        @focus="showAutocomplete = true"
-        @input="onSearchInput"
-        @keydown.down.prevent="navigateResults(1)"
-        @keydown.up.prevent="navigateResults(-1)"
-        @keydown.enter.prevent="selectHighlighted"
-      />
-      <button 
-        v-if="selectedSatellite" 
-        class="clear-button"
-        @click="clearSelection"
-        title="Clear selection"
-      >×</button>
+      <div class="input-wrapper" :class="{ focused: inputFocused }">
+        <span v-if="baofengMode" class="fm-tag">FM</span>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Search satellites..."
+          v-model="searchQuery"
+          @focus="showAutocomplete = true; inputFocused = true"
+          @blur="inputFocused = false"
+          @input="onSearchInput"
+          @keydown.down.prevent="navigateResults(1)"
+          @keydown.up.prevent="navigateResults(-1)"
+          @keydown.enter.prevent="selectHighlighted"
+        />
+        <button
+          v-if="selectedSatellite"
+          class="clear-button"
+          @click="clearSelection"
+          title="Clear selection"
+        >×</button>
+      </div>
       <div class="autocomplete-list" v-if="showAutocomplete && filteredSatellites.length > 0">
         <div
           v-for="(sat, index) in filteredSatellites"
@@ -76,6 +80,7 @@ const emit = defineEmits<{
 
 const searchQuery = ref('');
 const showAutocomplete = ref(false);
+const inputFocused = ref(false);
 const localShowPath = ref(props.showPath);
 const highlightedIndex = ref(-1);
 const baofengMode = ref(props.baofengMode);
@@ -243,39 +248,62 @@ watch(baofengMode, (newValue) => {
     position: relative;
     width: 100%;
     
-    .search-input {
-      width: 100%;
-      padding: 8px;
-      padding-right: 30px;
-      border-radius: var(--radius-md);
+    .input-wrapper {
+      display: flex;
+      align-items: center;
       border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
       background-color: white;
-      font-size: var(--text-ui-size);
-      color: #333;
+      position: relative;
 
-      &:focus {
-        outline: none;
+      &.focused {
         border-color: var(--color-primary);
         box-shadow: 0 0 0 2px var(--color-primary-focus);
       }
-    }
 
-    .clear-button {
-      position: absolute;
-      right: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: var(--color-danger-text);
-      font-size: 24px;
-      font-weight: 600;
-      line-height: 1;
-      padding: 0 5px;
-      cursor: pointer;
+      .fm-tag {
+        background-color: rgba(0, 60, 136, 0.15);
+        color: var(--color-primary);
+        font-size: var(--text-ui-sm-size);
+        padding: 2px 6px;
+        border-radius: var(--radius-sm);
+        margin-left: 6px;
+        font-weight: 600;
+        flex-shrink: 0;
+      }
 
-      &:hover {
-        color: var(--color-danger-hover);
+      .search-input {
+        flex: 1;
+        min-width: 0;
+        padding: 8px;
+        padding-right: 30px;
+        border: none;
+        background: transparent;
+        font-size: var(--text-ui-size);
+        color: #333;
+
+        &:focus {
+          outline: none;
+        }
+      }
+
+      .clear-button {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: var(--color-danger-text);
+        font-size: 24px;
+        font-weight: 600;
+        line-height: 1;
+        padding: 0 5px;
+        cursor: pointer;
+
+        &:hover {
+          color: var(--color-danger-hover);
+        }
       }
     }
     
