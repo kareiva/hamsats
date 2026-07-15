@@ -75,6 +75,7 @@ const upcomingVisibleSatellites = ref<UpcomingSatellite[]>([]);
 const fmSatellitesLookup = ref<Record<string, boolean>>({});
 const geoError = ref<string | null>(null);
 let upcomingPredictionInterval: number | null = null;
+let periodicUpdateTimer: number | null = null;
 
 const controlsEl = ref<HTMLElement | null>(null);
 
@@ -947,17 +948,11 @@ onMounted(async () => {
   await loadSatellites();
   
   // Start periodic updates
-  const updateInterval = 60000; // 1 minute
-  const updateTimer = setInterval(async () => {
+  periodicUpdateTimer = window.setInterval(async () => {
     if (!selectedSatellite.value && homeCoordinates.value && satellites.value.length > 0) {
       upcomingVisibleSatellites.value = await predictUpcomingVisibleSatellites();
     }
-  }, updateInterval);
-
-  // Clean up interval on unmount
-  onUnmounted(() => {
-    clearInterval(updateTimer);
-  });
+  }, 60000);
 });
 
 // Clean up on component unmount
@@ -970,6 +965,9 @@ onUnmounted(() => {
   }
   if (upcomingPredictionInterval !== null) {
     window.clearInterval(upcomingPredictionInterval);
+  }
+  if (periodicUpdateTimer !== null) {
+    window.clearInterval(periodicUpdateTimer);
   }
 });
 </script>
