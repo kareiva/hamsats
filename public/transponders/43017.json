@@ -19,11 +19,11 @@
     "norad_cat_id": 43017,
     "norad_follow_id": null,
     "status": "active",
-    "updated": "2019-04-18T05:39:53.343316Z",
-    "citation": "CITATION NEEDED - https://xkcd.com/285/",
-    "service": "Unknown",
-    "iaru_coordination": "N/A",
-    "iaru_coordination_url": "",
+    "updated": "2026-06-26T07:29:18.549045Z",
+    "citation": "https://www.amsat.org/two-way-satellites/ao-91/",
+    "service": "Amateur",
+    "iaru_coordination": "IARU Coordinated",
+    "iaru_coordination_url": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=342",
     "itu_notification": {
       "urls": []
     },
@@ -32,7 +32,7 @@
   },
   {
     "uuid": "LoK6HANoyLWRnwhJKs8gHd",
-    "description": "Mode U/V FM Voice CTCSS 67.0Hz",
+    "description": "Mode U/V FM Voice (no CTCSS any longer)",
     "alive": true,
     "type": "Transceiver",
     "uplink_low": 435250000,
@@ -50,11 +50,11 @@
     "norad_cat_id": 43017,
     "norad_follow_id": null,
     "status": "active",
-    "updated": "2022-08-21T14:30:48.036769Z",
-    "citation": "https://amsat-uk.org/tag/ao-91/",
+    "updated": "2026-06-26T09:17:33.053273Z",
+    "citation": "https://www.amsat.org/two-way-satellites/ao-91/",
     "service": "Amateur",
-    "iaru_coordination": "N/A",
-    "iaru_coordination_url": "",
+    "iaru_coordination": "IARU Coordinated",
+    "iaru_coordination_url": "https://iaru.amsat-uk.org/finished_detail.php?serialnum=342",
     "itu_notification": {
       "urls": []
     },

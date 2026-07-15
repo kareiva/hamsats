@@ -22,6 +22,7 @@ export class NearestSatellitesFeature {
   private satellites: NearestSatellite[] = [];
   private map: OlMap | null = null;
   private onSatelliteClick: ((name: string) => void) | null = null;
+  private active: boolean = false;
 
   constructor(vectorSource: VectorSource) {
     this.vectorSource = vectorSource;
@@ -58,6 +59,8 @@ export class NearestSatellitesFeature {
   }
 
   private updatePositions() {
+    if (!this.active) return;
+
     // Remove old features
     this.features.forEach(feature => {
       this.vectorSource.removeFeature(feature);
@@ -125,6 +128,7 @@ export class NearestSatellitesFeature {
   }
 
   public startTracking() {
+    this.active = true;
     this.updatePositions();
     this.updateInterval = window.setInterval(() => {
       this.updatePositions();
@@ -132,6 +136,7 @@ export class NearestSatellitesFeature {
   }
 
   public stopTracking() {
+    this.active = false;
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
       this.updateInterval = null;

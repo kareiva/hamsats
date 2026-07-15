@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "npm run generate-seo && run-p type-check \"build-only {@}\" --",
+    "build": "npm run bump-version && npm run generate-seo && run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --noEmit -p tsconfig.json --composite false",
@@ -14,7 +14,8 @@
     "generate-transponder-lookup": "node scripts/generate-transponder-lookup.js",
     "generate-sitemap": "node scripts/generate-sitemap.js",
     "generate-robots": "node scripts/generate-robots.js",
-    "generate-seo": "npm run generate-sitemap && npm run generate-robots"
+    "generate-seo": "npm run generate-sitemap && npm run generate-robots",
+    "bump-version": "node scripts/bump-version.js"
   },
   "dependencies": {
     "ol": "^8.2.0",
