@@ -13,6 +13,9 @@
     </p>
     <p v-if="geoError" class="geo-error">{{ geoError }}</p>
     <div v-if="homeCoordinates && showSlider" class="slider-container">
+      <div v-if="elevation !== null" class="asl-info">
+        <span class="label">ASL:</span> {{ elevation.toFixed(1) }}m
+      </div>
       <div class="vertical-slider-wrapper">
         <input 
           type="range" 
@@ -40,6 +43,7 @@ import type { HomeLocationCoordinates } from '../features/HomeLocation';
 const props = defineProps<{
   homeCoordinates: HomeLocationCoordinates | null;
   aglHeight: number;
+  elevation: number | null;
   geoError: string | null;
 }>();
 
@@ -110,6 +114,13 @@ watch(() => props.aglHeight, (newValue) => {
   
   .slider-container {
     margin-top: var(--space-2);
+
+    .asl-info {
+      text-align: center;
+      font-size: var(--text-ui-sm-size);
+      color: #666;
+      margin-bottom: var(--space-1);
+    }
 
     .vertical-slider-wrapper {
       display: flex;

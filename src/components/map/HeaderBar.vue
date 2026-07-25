@@ -3,7 +3,7 @@
     <div class="header-content">
       <div class="site-info">
         <a href="https://www.hamsats.com" class="site-url">hamsats.com</a> by 
-				<span class="callsign">LY2EN</span> - v2026-07-15
+				<span class="callsign">LY2EN</span> - v2026-07-25
       </div>
       <div class="author-info">
         <a href="https://github.com/kareiva/hamsats" class="github-link" target="_blank" rel="noopener">
