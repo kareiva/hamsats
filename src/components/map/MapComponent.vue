@@ -5,6 +5,7 @@
         <HomeLocationControl
           :home-coordinates="homeCoordinates"
           :agl-height="aglHeight"
+          :elevation="elevation"
           :geo-error="geoError"
           @toggle-home="toggleHomeLocation"
           @update:agl-height="updateAglHeight"
@@ -34,6 +35,8 @@
       :agl-height="aglHeight"
       :selected-satellite="selectedSatellite"
       :satellite-info="satelliteInfo"
+      :pass-event-type="nextPassEvent?.type ?? null"
+      :pass-event-remaining-seconds="passEventRemainingSeconds"
     />
   </div>
 </template>
@@ -69,6 +72,8 @@ const satellites = ref<{ name: string; tle: [string, string]; position?: { lat: 
 const showPath = ref<boolean>(false);
 const baofengMode = ref<boolean>(loadSetting('baofengMode', false));
 const satelliteInfo = ref<SatelliteInfo | null>(null);
+const nextPassEvent = ref<{ type: 'AOS' | 'EOS'; time: Date } | null>(null);
+const passEventRemainingSeconds = ref<number | null>(null);
 const currentSatelliteFeature = ref<SatelliteFeature | null>(null);
 const nearestSatellitesFeature = ref<NearestSatellitesFeature | null>(null);
 const upcomingVisibleSatellites = ref<UpcomingSatellite[]>([]);
@@ -511,6 +516,8 @@ function updateAglHeight(height: number) {
   if (homeLocationFeature) {
     homeLocationFeature.updateHorizon(height);
   }
+  // Observer horizon changed — force the AOS/EOS countdown to recompute
+  nextPassEvent.value = null;
 }
 
 // Watch for baofengMode changes
@@ -643,6 +650,74 @@ async function predictUpcomingVisibleSatellites(): Promise<UpcomingSatellite[]> 
   return upcomingSats.sort((a, b) => a.visibleAt.getTime() - b.visibleAt.getTime());
 }
 
+function getElevationAngleAt(tle: [string, string], timeMs: number): number {
+  if (!homeCoordinates.value) return -90;
+  const position = getLatLngObj(tle, timeMs);
+  const satInfo = getSatelliteInfo(tle, timeMs);
+  const info = calculateSatelliteInfo(
+    homeCoordinates.value.lat,
+    homeCoordinates.value.lon,
+    (elevation.value ?? 0) + aglHeight.value,
+    position.lat,
+    position.lng,
+    satInfo.height
+  );
+  return info.elevationAngle;
+}
+
+// Finds the next AOS (rise above horizon) or EOS (drop below horizon) for the given
+// satellite, searching forward from now. EOS passes are short, so it uses a finer
+// coarse step and shorter search horizon than AOS.
+function findNextPassEvent(tle: [string, string], currentlyVisible: boolean): { type: 'AOS' | 'EOS'; time: Date } | null {
+  if (!homeCoordinates.value) return null;
+
+  const type: 'AOS' | 'EOS' = currentlyVisible ? 'EOS' : 'AOS';
+  const now = Date.now();
+  const coarseStepMs = currentlyVisible ? 15 * 1000 : 60 * 1000;
+  const coarseSteps = currentlyVisible ? 4 * 60 * 4 : 24 * 60; // 4h at 15s steps, 24h at 60s steps
+
+  let prevTime = now;
+  let prevVisible = currentlyVisible;
+
+  for (let i = 1; i <= coarseSteps; i++) {
+    const checkTime = now + i * coarseStepMs;
+    const visible = getElevationAngleAt(tle, checkTime) > 0;
+
+    if (visible !== prevVisible) {
+      // Crossing found between prevTime and checkTime — refine it
+      const fineSteps = 30;
+      const fineStepMs = coarseStepMs / fineSteps;
+      for (let j = 1; j <= fineSteps; j++) {
+        const fineTime = prevTime + j * fineStepMs;
+        if ((getElevationAngleAt(tle, fineTime) > 0) === visible) {
+          return { type, time: new Date(fineTime) };
+        }
+      }
+      return { type, time: new Date(checkTime) };
+    }
+
+    prevTime = checkTime;
+    prevVisible = visible;
+  }
+
+  return null;
+}
+
+// Recomputes the countdown to the next AOS/EOS for the tracked satellite, only
+// re-searching for the next event once the previous one has passed.
+function updatePassEventCountdown(tle: [string, string]) {
+  const nowMs = Date.now();
+  const currentlyVisible = (satelliteInfo.value?.elevationAngle ?? -90) > 0;
+
+  if (!nextPassEvent.value || nowMs >= nextPassEvent.value.time.getTime()) {
+    nextPassEvent.value = findNextPassEvent(tle, currentlyVisible);
+  }
+
+  passEventRemainingSeconds.value = nextPassEvent.value
+    ? Math.max(0, Math.round((nextPassEvent.value.time.getTime() - nowMs) / 1000))
+    : null;
+}
+
 async function updateUpcomingVisibleSatellites() {
   const satellites = await predictUpcomingVisibleSatellites();
   upcomingVisibleSatellites.value = satellites;
@@ -760,6 +835,10 @@ watch(selectedSatellite, async (newSatellite) => {
     currentSatelliteFeature.value = null;
   }
 
+  // Reset AOS/EOS countdown; it gets recomputed for the newly selected satellite below
+  nextPassEvent.value = null;
+  passEventRemainingSeconds.value = null;
+
   // Stop tracking nearest satellites if we're selecting a specific satellite
   if (nearestSatellitesFeature.value && newSatellite) {
     nearestSatellitesFeature.value.stopTracking();
@@ -786,6 +865,7 @@ watch(selectedSatellite, async (newSatellite) => {
           homeCoordinates.value,
           elevation.value + aglHeight.value
         );
+        updatePassEventCountdown(satellite.tle);
       } else {
         currentSatelliteFeature.value.updatePosition();
       }
@@ -801,6 +881,7 @@ watch(selectedSatellite, async (newSatellite) => {
             homeCoordinates.value,
             elevation.value + aglHeight.value
           ) || null;
+          updatePassEventCountdown(satellite.tle);
         }
       }, 1000);
 

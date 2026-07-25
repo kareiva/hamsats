@@ -5,7 +5,7 @@
         <span class="label">Home:</span>
         {{ homeCoordinates.lat.toFixed(6) }}° N, {{ homeCoordinates.lon.toFixed(6) }}° E
       </div>
-      <div v-if="elevation !== null" class="status-item elevation">
+      <div v-if="!selectedSatellite && elevation !== null" class="status-item elevation">
         <span class="label">ASL:</span> {{ elevation.toFixed(1) }}m
         <span class="label">AGL:</span> {{ aglHeight }}m
       </div>
@@ -13,6 +13,8 @@
         <span class="label">Sat:</span> {{ satelliteInfo.distance.toFixed(1) }}km
         <span class="label">Az:</span> {{ satelliteInfo.azimuth.toFixed(1) }}°
         <span class="label">El:</span> {{ satelliteInfo.elevationAngle.toFixed(1) }}°
+        <span v-if="passEventType" class="label">{{ passEventType }}:</span>
+        <span v-if="passEventType">{{ formattedPassEventCountdown }}</span>
       </div>
       <div v-else-if="selectedSatellite" class="status-item">
         <span class="label">Sat:</span> Calculating...
@@ -28,6 +30,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { HomeLocationCoordinates } from './features/HomeLocation';
 import type { SatelliteInfo } from './features/SatelliteFeature';
 
@@ -36,13 +39,25 @@ interface SatelliteWithName {
   tle: [string, string];
 }
 
-defineProps<{
+const props = defineProps<{
   homeCoordinates: HomeLocationCoordinates | null;
   elevation: number | null;
   aglHeight: number;
   selectedSatellite: SatelliteWithName | null;
   satelliteInfo: SatelliteInfo | null;
+  passEventType: 'AOS' | 'EOS' | null;
+  passEventRemainingSeconds: number | null;
 }>();
+
+const formattedPassEventCountdown = computed(() => {
+  if (props.passEventRemainingSeconds === null) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const total = props.passEventRemainingSeconds;
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`;
+});
 </script>
 
 <style lang="scss" scoped>
@@ -104,8 +119,7 @@ defineProps<{
       }
 
       &.sat-selected {
-        .status-item.location,
-        .status-item.elevation {
+        .status-item.location {
           display: none;
         }
       }
