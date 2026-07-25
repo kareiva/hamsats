@@ -47,7 +47,7 @@ Plain TypeScript classes that own OpenLayers `Feature` objects and manage their 
 
 `App.vue` renders `HeaderBar` (fixed 32px height) followed by `RouterView`. Inside `MapComponent.vue`, `.container` is `height: calc(100vh - 32px)` and uses flex-column: the map (`flex: 1`) fills the space above `StatusBar` at the bottom. `body` has `overflow: hidden`.
 
-The version string in `HeaderBar.vue` is a hardcoded date (e.g. `v2026-06-15`) — update it manually on each release.
+The version string in `HeaderBar.vue` is a date (e.g. `v2026-06-15`) bumped automatically to the current date by `scripts/bump-version.js`, which runs as part of `npm run build` (or manually via `npm run bump-version`).
 
 ### UI controls (Vue components)
 
