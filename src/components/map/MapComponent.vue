@@ -270,14 +270,14 @@ async function loadSatellites() {
         nearestSatellitesFeature.value = new NearestSatellitesFeature(mapLayers.vectorSource);
       }
       
-      const nearestSats = satellites.value
+      const sortedSats = satellites.value
         .filter(sat => sat.distance !== undefined)
-        .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity))
-        .slice(0, 5);
+        .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+      const nearestSats = getNearestSatellitesForDisplay(sortedSats);
 
       nearestSatellitesFeature.value.updateSatellites(nearestSats);
       nearestSatellitesFeature.value.startTracking();
-      
+
       // Predict upcoming visible satellites
       upcomingVisibleSatellites.value = await predictUpcomingVisibleSatellites();
       console.log(`Predicted ${upcomingVisibleSatellites.value.length} upcoming visible satellites`);
@@ -326,6 +326,21 @@ async function loadSatellites() {
   }
 }
 
+// Given satellites already sorted by distance (nearest first), returns the up-to-5
+// nearest ones to display, filtered down to FM-capable satellites when Baofeng mode is on.
+function getNearestSatellitesForDisplay(sortedByDistance: typeof satellites.value): typeof satellites.value {
+  let nearestSats = sortedByDistance.slice(0, baofengMode.value ? 50 : 5); // Get more satellites if in Baofeng mode to filter
+
+  if (baofengMode.value) {
+    // Filter for FM satellites
+    nearestSats = nearestSats.filter(sat =>
+      sat.catalogNumber && fmSatellitesLookup.value[sat.catalogNumber]
+    ).slice(0, 5);
+  }
+
+  return nearestSats;
+}
+
 async function updateSatelliteDistances(satelliteList: typeof satellites.value) {
   if (!homeCoordinates.value) return;
 
@@ -360,16 +375,7 @@ async function updateSatelliteDistances(satelliteList: typeof satellites.value) 
   // selecting a satellite calls stopTracking() but keeps the object alive,
   // and this function runs on every distance recalculation tick.
   if (nearestSatellitesFeature.value && !selectedSatellite.value) {
-    let nearestSats = satelliteList.slice(0, baofengMode.value ? 50 : 5); // Get more satellites if in Baofeng mode to filter
-
-    if (baofengMode.value) {
-      // Filter for FM satellites
-      nearestSats = nearestSats.filter(sat => 
-        sat.catalogNumber && fmSatellitesLookup.value[sat.catalogNumber]
-      ).slice(0, 5);
-    }
-
-    nearestSatellitesFeature.value.updateSatellites(nearestSats);
+    nearestSatellitesFeature.value.updateSatellites(getNearestSatellitesForDisplay(satelliteList));
   }
 }
 
@@ -672,14 +678,14 @@ watch(homeCoordinates, async (newCoords) => {
         nearestSatellitesFeature.value = new NearestSatellitesFeature(mapLayers.vectorSource);
       }
       
-      const nearestSats = satellites.value
+      const sortedSats = satellites.value
         .filter(sat => sat.distance !== undefined)
-        .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity))
-        .slice(0, 5);
+        .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+      const nearestSats = getNearestSatellitesForDisplay(sortedSats);
 
       nearestSatellitesFeature.value.updateSatellites(nearestSats);
       nearestSatellitesFeature.value.startTracking();
-      
+
       // Predict upcoming visible satellites
       upcomingVisibleSatellites.value = await predictUpcomingVisibleSatellites();
       console.log(`Predicted ${upcomingVisibleSatellites.value.length} upcoming visible satellites`);
@@ -809,14 +815,14 @@ watch(selectedSatellite, async (newSatellite) => {
       }
       
       // Get and sort satellites by distance
-      const nearestSats = satellites.value
+      const sortedSats = satellites.value
         .filter(sat => sat.distance !== undefined)
-        .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity))
-        .slice(0, 5);
+        .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+      const nearestSats = getNearestSatellitesForDisplay(sortedSats);
 
       nearestSatellitesFeature.value.updateSatellites(nearestSats);
       nearestSatellitesFeature.value.startTracking();
-      
+
       // Predict upcoming visible satellites
       upcomingVisibleSatellites.value = await predictUpcomingVisibleSatellites();
       console.log(`Predicted ${upcomingVisibleSatellites.value.length} upcoming visible satellites`);
