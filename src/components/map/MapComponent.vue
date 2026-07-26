@@ -22,8 +22,8 @@
           :catalog-number="selectedSatelliteCatalogNumber"
         />
         <UpcomingSatellitesControl
-          v-if="!selectedSatellite && homeCoordinates && upcomingVisibleSatellites.length > 0"
-          :upcoming-satellites="upcomingVisibleSatellites"
+          v-if="!selectedSatellite && homeCoordinates && skySatellites.length > 0"
+          :sky-satellites="skySatellites"
           :baofeng-mode="baofengMode"
           @select-satellite="selectUpcomingSatellite"
         />
@@ -76,7 +76,7 @@ const nextPassEvent = ref<{ type: 'AOS' | 'EOS'; time: Date } | null>(null);
 const passEventRemainingSeconds = ref<number | null>(null);
 const currentSatelliteFeature = ref<SatelliteFeature | null>(null);
 const nearestSatellitesFeature = ref<NearestSatellitesFeature | null>(null);
-const upcomingVisibleSatellites = ref<UpcomingSatellite[]>([]);
+const skySatellites = ref<SkySatellite[]>([]);
 const fmSatellitesLookup = ref<Record<string, boolean>>({});
 const geoError = ref<string | null>(null);
 let upcomingPredictionInterval: number | null = null;
@@ -284,8 +284,8 @@ async function loadSatellites() {
       nearestSatellitesFeature.value.startTracking();
 
       // Predict upcoming visible satellites
-      upcomingVisibleSatellites.value = await predictUpcomingVisibleSatellites();
-      console.log(`Predicted ${upcomingVisibleSatellites.value.length} upcoming visible satellites`);
+      skySatellites.value = await predictSkySatellites();
+      console.log(`Predicted ${skySatellites.value.length} satellites in the sky`);
 
       // Calculate the extent to include home and all nearest satellites
       if (mapInstance.value && nearestSats.length > 0) {
@@ -526,17 +526,17 @@ watch(baofengMode, async (newValue) => {
   saveSetting('baofengMode', newValue);
   updateSatelliteDistances(satellites.value);
   if (homeCoordinates.value) {
-    upcomingVisibleSatellites.value = await predictUpcomingVisibleSatellites();
+    skySatellites.value = await predictSkySatellites();
   }
 });
 
-interface UpcomingSatellite {
+interface SkySatellite {
   name: string;
   tle: [string, string];
-  visibleAt: Date;
+  eventTime: Date;
+  eventType: 'AOS' | 'EOS';
   catalogNumber?: string;
   hasFM?: boolean;
-  closestDistance?: number;
 }
 
 interface SatelliteWithName {
@@ -556,98 +556,53 @@ async function loadFmSatellitesLookup() {
   }
 }
 
-async function predictUpcomingVisibleSatellites(): Promise<UpcomingSatellite[]> {
+// Satellites currently above the horizon (with their EOS) sorted first, followed by
+// satellites not yet visible (with their AOS), soonest first within each group. AOS
+// search is capped once enough upcoming candidates are found, since scanning every
+// non-visible satellite to a 24h horizon is expensive; currently-visible satellites are
+// always included since finding their (near) EOS is comparatively cheap.
+async function predictSkySatellites(): Promise<SkySatellite[]> {
   if (!homeCoordinates.value) return [];
-  
-  const upcomingSats: UpcomingSatellite[] = [];
-  const now = new Date();
-  
+
+  const visibleNow: SkySatellite[] = [];
+  const upcoming: SkySatellite[] = [];
+
   for (const sat of satellites.value) {
     if (selectedSatellite.value && selectedSatellite.value.name === sat.name) continue;
-    
-    // Check FM capability first if in Baofeng mode
-    if (baofengMode.value) {
-      const hasFM = sat.catalogNumber ? fmSatellitesLookup.value[sat.catalogNumber] || false : false;
-      if (!hasFM) continue; // Skip non-FM satellites in Baofeng mode
-    }
-    
-    if (upcomingSats.length >= 10) break; // Stop after finding 10 satellites
-    
+
+    const hasFM = sat.catalogNumber ? fmSatellitesLookup.value[sat.catalogNumber] || false : false;
+    if (baofengMode.value && !hasFM) continue; // Skip non-FM satellites in Baofeng mode
+
     try {
-      let nextVisibleTime = now.getTime();
-      let found = false;
+      const currentlyVisible = getElevationAngleAt(sat.tle, Date.now()) > 0;
+      if (!currentlyVisible && upcoming.length >= 15) continue;
 
-      // First do a coarse search in 10-minute intervals
-      for (let i = 0; i < 144 && !found; i++) { // Check next 24 hours in 10-minute intervals
-        const checkTime = nextVisibleTime + i * 10 * 60 * 1000;
-        const position = getLatLngObj(sat.tle, checkTime);
-        const satInfo = getSatelliteInfo(sat.tle, checkTime);
+      const event = findNextPassEvent(sat.tle, currentlyVisible);
+      if (!event) continue;
 
-        const info = calculateSatelliteInfo(
-          homeCoordinates.value.lat,
-          homeCoordinates.value.lon,
-          homeCoordinates.value.elevation || 0,
-          position.lat,
-          position.lng,
-          satInfo.height
-        );
+      const entry: SkySatellite = {
+        name: sat.name,
+        tle: sat.tle,
+        eventTime: event.time,
+        eventType: event.type,
+        catalogNumber: sat.catalogNumber,
+        hasFM
+      };
 
-        if (info.elevationAngle > 0) {
-          // Found a 10-minute window where satellite is visible
-          // Now do a fine search within this window
-          const windowStart = checkTime - 10 * 60 * 1000;
-          
-          // Check every minute in this window
-          for (let j = 0; j < 10 && !found; j++) {
-            const fineCheckTime = windowStart + j * 60 * 1000;
-            const finePosition = getLatLngObj(sat.tle, fineCheckTime);
-            const fineSatInfo = getSatelliteInfo(sat.tle, fineCheckTime);
-
-            const fineInfo = calculateSatelliteInfo(
-              homeCoordinates.value.lat,
-              homeCoordinates.value.lon,
-              homeCoordinates.value.elevation || 0,
-              finePosition.lat,
-              finePosition.lng,
-              fineSatInfo.height
-            );
-
-            if (fineInfo.elevationAngle > 0) {
-              nextVisibleTime = fineCheckTime;
-              found = true;
-            }
-          }
-        }
-      }
-
-      if (found && nextVisibleTime > now.getTime()) {
-        const hasFM = sat.catalogNumber ? fmSatellitesLookup.value[sat.catalogNumber] || false : false;
-        const aosPosition = getLatLngObj(sat.tle, nextVisibleTime);
-        const aosSatInfo = getSatelliteInfo(sat.tle, nextVisibleTime);
-        const aosInfo = calculateSatelliteInfo(
-          homeCoordinates.value.lat,
-          homeCoordinates.value.lon,
-          homeCoordinates.value.elevation || 0,
-          aosPosition.lat,
-          aosPosition.lng,
-          aosSatInfo.height
-        );
-
-        upcomingSats.push({
-          name: sat.name,
-          tle: sat.tle,
-          visibleAt: new Date(nextVisibleTime),
-          catalogNumber: sat.catalogNumber,
-          hasFM,
-          closestDistance: aosInfo.distance
-        });
+      if (event.type === 'EOS') {
+        visibleNow.push(entry);
+      } else {
+        upcoming.push(entry);
       }
     } catch (e) {
-      console.warn(`Failed to predict visibility for satellite ${sat.name}:`, e);
+      console.warn(`Failed to predict sky visibility for satellite ${sat.name}:`, e);
     }
   }
-  
-  return upcomingSats.sort((a, b) => a.visibleAt.getTime() - b.visibleAt.getTime());
+
+  visibleNow.sort((a, b) => a.eventTime.getTime() - b.eventTime.getTime());
+  upcoming.sort((a, b) => a.eventTime.getTime() - b.eventTime.getTime());
+
+  return [...visibleNow, ...upcoming];
 }
 
 function getElevationAngleAt(tle: [string, string], timeMs: number): number {
@@ -718,18 +673,18 @@ function updatePassEventCountdown(tle: [string, string]) {
     : null;
 }
 
-async function updateUpcomingVisibleSatellites() {
-  const satellites = await predictUpcomingVisibleSatellites();
-  upcomingVisibleSatellites.value = satellites;
+async function updateSkySatellites() {
+  const satellites = await predictSkySatellites();
+  skySatellites.value = satellites;
 }
 
 // Update the upcoming satellites when needed
 watch([homeCoordinates, () => selectedSatellite.value?.name], () => {
-  void updateUpcomingVisibleSatellites();
+  void updateSkySatellites();
 });
 
 // Initial update
-void updateUpcomingVisibleSatellites();
+void updateSkySatellites();
 
 // Watch for changes in home coordinates
 watch(homeCoordinates, async (newCoords) => {
@@ -762,8 +717,8 @@ watch(homeCoordinates, async (newCoords) => {
       nearestSatellitesFeature.value.startTracking();
 
       // Predict upcoming visible satellites
-      upcomingVisibleSatellites.value = await predictUpcomingVisibleSatellites();
-      console.log(`Predicted ${upcomingVisibleSatellites.value.length} upcoming visible satellites`);
+      skySatellites.value = await predictSkySatellites();
+      console.log(`Predicted ${skySatellites.value.length} satellites in the sky`);
 
       // Calculate the extent to include home and all nearest satellites
       if (mapInstance.value && nearestSats.length > 0) {
@@ -905,8 +860,8 @@ watch(selectedSatellite, async (newSatellite) => {
       nearestSatellitesFeature.value.startTracking();
 
       // Predict upcoming visible satellites
-      upcomingVisibleSatellites.value = await predictUpcomingVisibleSatellites();
-      console.log(`Predicted ${upcomingVisibleSatellites.value.length} upcoming visible satellites`);
+      skySatellites.value = await predictSkySatellites();
+      console.log(`Predicted ${skySatellites.value.length} satellites in the sky`);
 
       // Calculate the extent to include home and all nearest satellites
       if (mapInstance.value && nearestSats.length > 0) {
@@ -967,7 +922,7 @@ function selectUpcomingSatellite(name: string) {
 // Update the watch expressions
 watch([homeCoordinates, selectedSatellite], async () => {
   if (homeCoordinates.value) {
-    upcomingVisibleSatellites.value = await predictUpcomingVisibleSatellites();
+    skySatellites.value = await predictSkySatellites();
   }
 });
 
@@ -1037,7 +992,7 @@ onMounted(async () => {
   const updateInterval = 60000; // 1 minute
   const updateTimer = setInterval(async () => {
     if (!selectedSatellite.value && homeCoordinates.value && satellites.value.length > 0) {
-      upcomingVisibleSatellites.value = await predictUpcomingVisibleSatellites();
+      skySatellites.value = await predictSkySatellites();
     }
   }, updateInterval);
 

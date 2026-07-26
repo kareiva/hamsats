@@ -13,6 +13,10 @@
   --color-danger-text:      #8B0000;
   --color-danger-bg:        rgba(139, 0, 0, 0.08);
 
+  /* Accent (orange) — matches the live satellite tracking color used on the map */
+  --color-accent:           #F57C00;
+  --color-accent-tint:      rgba(245, 124, 0, 0.12);
+
   /* Spacing scale (4-point) */
   --space-1: 4px;
   --space-2: 8px;
