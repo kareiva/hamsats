@@ -1,13 +1,14 @@
 import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
 import LineString from 'ol/geom/LineString';
+import MultiLineString from 'ol/geom/MultiLineString';
 import Polygon from 'ol/geom/Polygon';
 import { Style, Icon, Fill, Stroke, Text } from 'ol/style';
 import { fromLonLat } from 'ol/proj';
 import VectorSource from 'ol/source/Vector';
 import { getLatLngObj, getSatelliteInfo } from 'tle.js';
 import { satelliteIconUri, arrowIconUri, calculateBearing } from '../utils/icons';
-import { createCurvedLine, calculateSatelliteHorizonPoints, calculateSatelliteInfo } from '../utils/calculations';
+import { createCurvedLine, calculateSatelliteHorizonPoints, calculateSatelliteInfo, splitLineAtAntimeridian } from '../utils/calculations';
 import type { HomeLocationCoordinates } from './HomeLocation';
 
 export interface SatellitePosition {
@@ -25,7 +26,7 @@ export interface SatelliteInfo {
 export class SatelliteFeature {
   private satelliteFeature: Feature<Point>;
   private horizonFeature: Feature<Polygon>;
-  private lineOfSightFeature: Feature<LineString>;
+  private lineOfSightFeature: Feature<MultiLineString>;
   private pathFeatures: Feature[] = [];
   private satelliteToPathLine: Feature<LineString>;
   private vectorSource: VectorSource;
@@ -163,8 +164,9 @@ export class SatelliteFeature {
         [homeLocation.lon, homeLocation.lat],
         [position.lng, position.lat]
       );
-      const mapPoints = curvedPoints.map(point => fromLonLat(point));
-      this.lineOfSightFeature.setGeometry(new LineString(mapPoints));
+      const mapSegments = splitLineAtAntimeridian(curvedPoints)
+        .map(segment => segment.map(point => fromLonLat(point)));
+      this.lineOfSightFeature.setGeometry(new MultiLineString(mapSegments));
 
       satelliteInfo = calculateSatelliteInfo(
         homeLocation.lat,
