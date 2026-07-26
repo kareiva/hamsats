@@ -365,6 +365,13 @@ function clearHomeLocation() {
   satellites.value.forEach(sat => {
     sat.distance = undefined;
   });
+
+  // Stop showing sky satellites and their coverage circles — they're meaningless without
+  // an observer location, and nothing else would stop this feature's own tracking loop.
+  if (skySatellitesFeature.value) {
+    skySatellitesFeature.value.stopTracking();
+  }
+  skySatellites.value = [];
 }
 
 function requestGeolocation() {
@@ -699,6 +706,11 @@ watch(homeCoordinates, async (newCoords) => {
 
   saveSetting('homeLocation', newCoords);
   elevation.value = null;
+
+  // Let the browser actually paint the just-placed home marker before the view-fit
+  // animation below starts — otherwise the marker's icon can visually lag behind the
+  // zoom instead of appearing first, since both compete for the main thread.
+  await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
   // Show satellites immediately using an approximate (sea-level) observer altitude —
   // getElevationAngleAt() already treats a null elevation as 0 — rather than waiting on

@@ -73,6 +73,10 @@ export class SkySatellitesFeature {
       const position = getLatLngObj(satellite.tle, now);
       const point = fromLonLat([position.lng, position.lat]);
 
+      // Above-horizon (currently visible) satellites are drawn in the theme's orange,
+      // matching their coverage circle; upcoming satellites stay green.
+      const color = satellite.eventType === 'EOS' ? '#F57C00' : '#388E3C';
+
       const feature = new Feature({
         geometry: new Point(point),
         satelliteName: satellite.name
@@ -84,7 +88,7 @@ export class SkySatellitesFeature {
       feature.setStyle([
         new Style({
           image: new Icon({
-            src: satelliteIconUri('#388E3C'),
+            src: satelliteIconUri(color),
             scale: 1.2,
             anchor: [0.5, 0.5],
           })
@@ -93,7 +97,7 @@ export class SkySatellitesFeature {
           text: new Text({
             text: satellite.name,
             font: '12px monospace',
-            fill: new Fill({ color: '#388E3C' }),
+            fill: new Fill({ color }),
             stroke: new Stroke({ color: 'white', width: 3 }),
             backgroundFill: new Fill({ color: 'rgba(255, 255, 255, 0.8)' }),
             padding: [5, 5, 5, 5],
@@ -109,7 +113,7 @@ export class SkySatellitesFeature {
       });
       arrowFeature.setStyle(new Style({
         image: new Icon({
-          src: arrowIconUri('#388E3C'),
+          src: arrowIconUri(color),
           scale: 0.6,
           anchor: [0.5, 0.5],
           rotation: bearing,
