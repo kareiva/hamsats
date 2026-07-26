@@ -5,7 +5,7 @@
       <span class="toggle-icon">{{ expanded ? '▼' : '▶' }}</span>
     </div>
     <div class="transmitter-list" v-if="expanded">
-      <div v-for="(tx, index) in transmitters" :key="index" class="transmitter-item">
+      <div v-for="(tx, index) in sortedTransmitters" :key="index" class="transmitter-item">
         <div class="transmitter-description">{{ tx.description }}</div>
         <div class="transmitter-details">
           <div v-if="tx.uplink_low" class="frequency uplink">
@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 interface Transmitter {
   description: string;
@@ -33,6 +33,7 @@ interface Transmitter {
   downlink_low: number | null;
   mode: string;
   alive: boolean;
+  type?: string;
 }
 
 const props = defineProps<{
@@ -42,6 +43,17 @@ const props = defineProps<{
 const transmitters = ref<Transmitter[]>([]);
 const expanded = ref(true);
 const error = ref<string | null>(null);
+
+// Transponders (full duplex repeaters) are generally the most useful entries for an
+// operator, so surface them first; stable-sorts within each group, preserving the API's
+// original order otherwise.
+const sortedTransmitters = computed(() =>
+  [...transmitters.value].sort((a, b) => {
+    const aRank = a.type === 'Transponder' ? 0 : 1;
+    const bRank = b.type === 'Transponder' ? 0 : 1;
+    return aRank - bRank;
+  })
+);
 
 function toggleExpanded() {
   expanded.value = !expanded.value;

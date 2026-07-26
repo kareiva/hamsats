@@ -205,6 +205,13 @@ window.addEventListener('click', (e: MouseEvent) => {
   }
 });
 
+// Escape clears the current satellite selection
+window.addEventListener('keydown', (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && props.selectedSatellite) {
+    clearSelection();
+  }
+});
+
 watch(localShowPath, (newValue) => {
   emit('update:show-path', newValue);
 });

@@ -26,3 +26,25 @@ test('Baofeng (FM) mode filters the sky panel to FM-capable fixture satellites o
     expect(name).toMatch(/ISS|RADFXSAT/);
   }
 });
+
+test('Baofeng (FM) mode stays enabled across selecting and deselecting a satellite', async ({ page }) => {
+  await mockFixtureData(page);
+  await seedHomeLocation(page);
+  await page.clock.install({ time: FROZEN_TIME });
+
+  await page.goto('/');
+
+  await page.getByLabel(/baofeng/i).check();
+  await expect(page.locator('.satellite-item', { hasText: 'OSCAR 7' })).toHaveCount(0);
+
+  // The Baofeng checkbox is hidden (not destroyed) while a satellite is selected — track
+  // one, then deselect, and confirm the mode and its filtering both survive the round trip.
+  await page.locator('.satellite-item .track-button').first().click();
+  await expect(page.locator('.status-item.satellite')).not.toContainText('Calculating...');
+
+  await page.getByTitle('Clear selection').click();
+
+  await expect(page.getByLabel(/baofeng/i)).toBeChecked();
+  await expect(page.locator('.satellite-item').first()).toBeVisible();
+  await expect(page.locator('.satellite-item', { hasText: 'OSCAR 7' })).toHaveCount(0);
+});

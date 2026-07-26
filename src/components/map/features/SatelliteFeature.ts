@@ -243,23 +243,56 @@ export class SatelliteFeature {
       segments.push(currentSegment);
     }
 
-    // Create path features for each segment
-    segments.forEach(segment => {
-      const mapPoints = segment.map(point => fromLonLat(point));
-      const pathFeature = new Feature<LineString>({
-        geometry: new LineString(mapPoints)
-      });
+    // Create path features for each segment. The last 5 minutes of the path (only
+    // relevant for the final segment, since that's always where the path's end falls)
+    // fades out to fully transparent instead of ending abruptly, rendered as a handful of
+    // short sub-segments with progressively decreasing opacity.
+    const PATH_OPACITY = 0.8;
+    const FADE_MINUTES = 5;
 
-      pathFeature.setStyle(new Style({
-        stroke: new Stroke({
-          color: 'rgba(128, 128, 128, 0.8)',
-          width: 2,
-          lineDash: [4, 4]
-        })
-      }));
+    segments.forEach((segment, segmentIndex) => {
+      const isLastSegment = segmentIndex === segments.length - 1;
+      const fadePointCount = isLastSegment ? Math.min(FADE_MINUTES + 1, segment.length) : 0;
+      const solidPointCount = segment.length - fadePointCount + 1; // +1 so it connects to the fade
 
-      this.lineSource.addFeature(pathFeature);
-      this.pathFeatures.push(pathFeature);
+      if (solidPointCount > 1) {
+        const solidPoints = segment.slice(0, solidPointCount).map(point => fromLonLat(point));
+        const pathFeature = new Feature<LineString>({
+          geometry: new LineString(solidPoints)
+        });
+
+        pathFeature.setStyle(new Style({
+          stroke: new Stroke({
+            color: `rgba(128, 128, 128, ${PATH_OPACITY})`,
+            width: 2,
+            lineDash: [4, 4]
+          })
+        }));
+
+        this.lineSource.addFeature(pathFeature);
+        this.pathFeatures.push(pathFeature);
+      }
+
+      if (fadePointCount > 1) {
+        const fadePoints = segment.slice(solidPointCount - 1).map(point => fromLonLat(point));
+        for (let i = 0; i < fadePoints.length - 1; i++) {
+          const opacity = PATH_OPACITY * (1 - (i + 1) / (fadePoints.length - 1));
+          const fadeFeature = new Feature<LineString>({
+            geometry: new LineString([fadePoints[i], fadePoints[i + 1]])
+          });
+
+          fadeFeature.setStyle(new Style({
+            stroke: new Stroke({
+              color: `rgba(128, 128, 128, ${opacity.toFixed(2)})`,
+              width: 2,
+              lineDash: [4, 4]
+            })
+          }));
+
+          this.lineSource.addFeature(fadeFeature);
+          this.pathFeatures.push(fadeFeature);
+        }
+      }
     });
 
     // Add markers at 5-minute intervals, but check for meridian crossing
