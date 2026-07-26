@@ -20,6 +20,10 @@ npm run generate-seo                # Regenerate sitemap.xml and robots.txt
 
 There are no tests in this project.
 
+## Verification
+
+After making changes, only run `npm run lint` and `npm run type-check` (simple syntax/type checking). Do not spin up the dev server, Playwright, or other browser-based verification unless explicitly asked.
+
 ## Architecture
 
 Single-page Vue 3 + TypeScript app. The entire UI is one route (`HomeView.vue` → `MapComponent.vue`). No Pinia/Vuex — state lives in `MapComponent.vue` as `ref`s and is passed down via props/emits.
@@ -28,7 +32,7 @@ Single-page Vue 3 + TypeScript app. The entire UI is one route (`HomeView.vue` �
 
 OpenLayers (`ol`) renders the map with four stacked layers (lowest to highest z-index):
 
-1. **OSM tile layer** — base map
+1. **Basemap tile layer** — CARTO Positron (light, borders/labels only, no roads/POI clutter); zoom control is disabled since the app drives zoom programmatically
 2. **horizonLayer** (`horizonSource`) — observer's radio horizon circle
 3. **lineLayer** (`lineSource`) — line-of-sight arc and orbital path segments
 4. **vectorLayer** (`vectorSource`) — satellite icons, horizon footprint polygons, home marker
@@ -40,7 +44,7 @@ All map initialization is in `src/components/map/utils/mapSetup.ts`. The `MapLay
 Plain TypeScript classes that own OpenLayers `Feature` objects and manage their lifecycle:
 
 - **`SatelliteFeature`** — tracks one selected satellite. Manages the satellite icon, its horizon footprint polygon, the curved line-of-sight arc, and the optional 100-minute future path. Updates position every 1 s and path every 10 s via `setInterval`.
-- **`NearestSatellitesFeature`** — shows up to 5 nearby satellites when none is selected. Clickable icons that fire an `onSatelliteClick` callback back into `MapComponent.vue`.
+- **`SkySatellitesFeature`** — shows up to 10 satellites in the sky when none is selected: currently-visible satellites ranked by longest remaining time above the horizon, padded with the soonest-upcoming satellites down to a minimum of 5. Clickable icons that fire an `onSatelliteClick` callback back into `MapComponent.vue`.
 - **`HomeLocationFeature`** — home location pin (draggable via OL `Translate` interaction) and the observer's radio horizon `Circle`.
 
 ### Page layout
