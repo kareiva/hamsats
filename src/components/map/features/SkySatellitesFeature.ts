@@ -1,15 +1,18 @@
 import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
+import Polygon from 'ol/geom/Polygon';
 import { Style, Icon, Fill, Text, Stroke } from 'ol/style';
 import { fromLonLat } from 'ol/proj';
 import VectorSource from 'ol/source/Vector';
-import { getLatLngObj } from 'tle.js';
+import { getLatLngObj, getSatelliteInfo } from 'tle.js';
 import { satelliteIconUri, arrowIconUri, calculateBearing } from '../utils/icons';
+import { calculateSatelliteHorizonPoints } from '../utils/calculations';
 import type { Map as OlMap } from 'ol';
 
 export interface MapSkySatellite {
   name: string;
   tle: [string, string];
+  eventType?: 'AOS' | 'EOS';
 }
 
 export class SkySatellitesFeature {
@@ -117,6 +120,28 @@ export class SkySatellitesFeature {
       this.vectorSource.addFeature(arrowFeature);
       this.features.push(feature);
       this.features.push(arrowFeature);
+
+      // Currently-visible satellites (not merely upcoming) also get their coverage
+      // circle — outline only, no fill, so it doesn't obscure the map underneath.
+      if (satellite.eventType === 'EOS') {
+        const satInfo = getSatelliteInfo(satellite.tle, now);
+        const horizonPoints = calculateSatelliteHorizonPoints(position.lat, position.lng, satInfo.height);
+        const mapHorizonPoints = horizonPoints.map(p => fromLonLat(p));
+
+        const horizonFeature = new Feature({
+          geometry: new Polygon([mapHorizonPoints])
+        });
+        horizonFeature.setStyle(new Style({
+          stroke: new Stroke({
+            color: 'rgba(245, 124, 0, 0.6)',
+            width: 1,
+            lineDash: [2, 4]
+          })
+        }));
+
+        this.vectorSource.addFeature(horizonFeature);
+        this.features.push(horizonFeature);
+      }
     });
   }
 
