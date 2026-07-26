@@ -1,0 +1,9 @@
+[
+  {
+    "description": "Mode V/A (A) Lin SSB",
+    "alive": true,
+    "mode": "USB",
+    "uplink_mode": "USB",
+    "norad_cat_id": 7530
+  }
+]

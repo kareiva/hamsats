@@ -1,0 +1,9 @@
+[
+  {
+    "description": "Mode U/V FM Voice",
+    "alive": true,
+    "mode": "FM",
+    "uplink_mode": "FM",
+    "norad_cat_id": 43017
+  }
+]
