@@ -1,7 +1,7 @@
 import Map from 'ol/Map';
 import View from 'ol/View';
 import TileLayer from 'ol/layer/Tile';
-import OSM from 'ol/source/OSM';
+import XYZ from 'ol/source/XYZ';
 import { defaults as defaultControls } from 'ol/control';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
@@ -58,7 +58,15 @@ export function initializeMap(
     target,
     layers: [
       new TileLayer({
-        source: new OSM()
+        // CARTO Positron: light, minimal basemap with country/state borders and labels,
+        // no roads or POI clutter until you zoom in much further than this app needs.
+        source: new XYZ({
+          url: 'https://{a-c}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+          attributions: [
+            '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>'
+          ],
+          crossOrigin: 'anonymous'
+        })
       }),
       horizonLayer,
       lineLayer,
@@ -70,6 +78,6 @@ export function initializeMap(
       maxZoom: 16,
       projection: 'EPSG:3857'
     }),
-    controls: defaultControls()
+    controls: defaultControls({ zoom: false })
   });
 } 
