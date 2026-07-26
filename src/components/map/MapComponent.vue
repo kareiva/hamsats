@@ -358,7 +358,8 @@ function clearHomeLocation() {
   
   removeSetting('amateur_txt');
   removeSetting('amateur_txt_timestamp');
-  
+  removeSetting('homeLocation');
+
   // Clear satellite selection and distances
   selectedSatellite.value = null;
   satellites.value.forEach(sat => {
