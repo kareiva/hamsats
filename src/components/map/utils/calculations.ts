@@ -174,4 +174,27 @@ export function calculateSatelliteHorizonPoints(
 
 export function calculateHorizonDistance(observerHeight: number): number {
   return 3.57 * Math.sqrt(observerHeight);
-} 
+}
+
+// Splits a lon/lat point sequence into segments wherever it crosses the antimeridian
+// (a longitude jump greater than 180°), so callers can render each segment as its own
+// line instead of a single line that draws a spurious chord across the whole map.
+export function splitLineAtAntimeridian(points: number[][]): number[][][] {
+  const segments: number[][][] = [];
+  let currentSegment: number[][] = [];
+
+  for (const point of points) {
+    if (currentSegment.length > 0) {
+      const deltaLon = point[0] - currentSegment[currentSegment.length - 1][0];
+      if (Math.abs(deltaLon) > 180) {
+        if (currentSegment.length > 1) segments.push(currentSegment);
+        currentSegment = [];
+      }
+    }
+    currentSegment.push(point);
+  }
+
+  if (currentSegment.length > 1) segments.push(currentSegment);
+
+  return segments;
+}
