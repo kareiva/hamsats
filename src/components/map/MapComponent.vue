@@ -452,11 +452,14 @@ function updateAglHeight(height: number) {
 
 // Watch for baofengMode changes
 watch(baofengMode, async (newValue) => {
-  // Clearing the selection triggers the selectedSatellite watcher, which refreshes
-  // both the sky-satellites panel and the map markers for the new mode.
+  // Called explicitly (not left to the selectedSatellite watcher) because
+  // selectedSatellite is already null in the common case — the sky panel/map markers
+  // are only shown when nothing is selected — so this assignment wouldn't trigger that
+  // watcher's own refresh.
   selectedSatellite.value = null;
   saveSetting('baofengMode', newValue);
   updateSatelliteDistances(satellites.value);
+  await refreshSkyState(true);
 });
 
 interface SkySatellite {
