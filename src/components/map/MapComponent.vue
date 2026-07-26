@@ -977,18 +977,6 @@ onUnmounted(() => {
     right: 10px !important;
     bottom: 60px !important;
   }
-
-  .ol-attribution {
-    bottom: 10px !important;
-    left: 0 !important;
-    right: 0 !important;
-    text-align: center;
-    background-color: rgba(255, 255, 255, 0.7) !important;
-    
-    &.ol-uncollapsible {
-      right: 0 !important;
-    }
-  }
 }
 
 /* OpenLayers control styles */
@@ -1000,6 +988,9 @@ onUnmounted(() => {
   z-index: 1000;
   
   button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background-color: var(--color-primary);
     color: white;
     border: none;
@@ -1026,39 +1017,48 @@ onUnmounted(() => {
   bottom: 10px !important;
 
   right: 10px !important;
-  
+  transition: opacity 0.25s linear, visibility 0s linear;
+
+  // OpenLayers adds this class when rotation is 0; we don't load ol.css, so replicate its
+  // default hide behavior here — otherwise the compass button is always visible.
+  &.ol-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.25s linear, visibility 0s linear 0.25s;
+  }
+
   button {
     border-radius: var(--radius-md);
   }
 }
 
+// Bottom-left of the map, flush against the top of StatusBar below it — same placement
+// in every view, so it never has to dodge the compass control (bottom-right).
 .ol-attribution {
   position: absolute !important;
-  bottom: 50px !important;
-  right: 10px !important;
-  
-  &.ol-uncollapsible {
-    bottom: 10px !important;
-    right: 60px !important;
-  }
-  
+  left: 0 !important;
+  right: auto !important;
+  bottom: 0 !important;
+  text-align: left;
+  padding: 2px 8px !important;
+  background-color: rgba(255, 255, 255, 0.7) !important;
+
   ul {
     font-size: 0.7rem;
     color: #333;
     text-shadow: 0 0 2px white;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  
+
   button {
     display: none !important;
   }
-  
+
   &.ol-collapsed ul {
     display: block !important;
-  }
-  
-  &.ol-collapsed {
-    padding: 0 !important;
-    background: none !important;
   }
 }
 

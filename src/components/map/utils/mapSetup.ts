@@ -14,6 +14,19 @@ export interface MapLayers {
   lineSource: VectorSource<Feature<Geometry>>;
 }
 
+// Same north-pointing arrow shape as arrowIconUri() in utils/icons.ts — replaces the
+// Rotate control's default '⇧' text glyph (which renders inconsistently since this app
+// doesn't load OpenLayers' own stylesheet/icon font) with a shape that visually points
+// straight up/north at rotation 0, matching what clicking it actually does.
+function createCompassLabel(): HTMLElement {
+  const label = document.createElement('span');
+  label.innerHTML =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">' +
+    '<polygon points="12,2 18,20 12,16 6,20" fill="currentColor" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>' +
+    '</svg>';
+  return label;
+}
+
 export function createMapLayers(): MapLayers {
   const vectorSource = new VectorSource<Feature<Geometry>>();
   const horizonSource = new VectorSource<Feature<Geometry>>({
@@ -78,6 +91,9 @@ export function initializeMap(
       maxZoom: 16,
       projection: 'EPSG:3857'
     }),
-    controls: defaultControls({ zoom: false })
+    controls: defaultControls({
+      zoom: false,
+      rotateOptions: { label: createCompassLabel() }
+    })
   });
 } 
