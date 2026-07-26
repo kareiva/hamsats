@@ -1,18 +1,22 @@
 <template>
-  <div class="upcoming-satellites-control" v-if="upcomingSatellites.length > 0">
+  <div class="upcoming-satellites-control" v-if="skySatellites.length > 0">
     <div class="control-header" @click="toggleExpanded">
-      <h3>Upcoming {{ baofengMode ? 'FM ' : '' }}Satellites</h3>
+      <h3>{{ baofengMode ? 'FM ' : '' }}Satellites in your sky</h3>
       <span class="toggle-icon">{{ expanded ? '▼' : '▶' }}</span>
     </div>
     <div class="satellite-list" v-if="expanded">
-      <div v-for="satellite in sortedSatellites" :key="satellite.name" class="satellite-item">
+      <div
+        v-for="satellite in visibleSatellites"
+        :key="satellite.name"
+        class="satellite-item"
+        :class="{ 'visible-now': satellite.eventType === 'EOS' }"
+      >
         <div class="satellite-name">
           <span v-if="satellite.hasFM" class="fm-tag">FM</span>
           {{ satellite.name }}
         </div>
         <div class="satellite-time">
-          {{ formatVisibilityTime(satellite.visibleAt) }}
-          <span v-if="satellite.closestDistance" class="satellite-dist">· {{ formatDistance(satellite.closestDistance) }}</span>
+          {{ formatEventTime(satellite) }}
         </div>
         <button class="track-button" @click="selectSatellite(satellite.name)">
           Track
@@ -24,18 +28,17 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { formatDistance } from '../utils/format';
 
-interface UpcomingSatellite {
+interface SkySatellite {
   name: string;
   tle: [string, string];
-  visibleAt: Date;
+  eventTime: Date;
+  eventType: 'AOS' | 'EOS';
   hasFM?: boolean;
-  closestDistance?: number;
 }
 
 const props = defineProps<{
-  upcomingSatellites: UpcomingSatellite[];
+  skySatellites: SkySatellite[];
   baofengMode: boolean;
 }>();
 
@@ -44,17 +47,10 @@ const emit = defineEmits<{
 }>();
 
 const expanded = ref(window.innerWidth > 640);
-const sortedSatellites = computed(() => {
-  let satellites = [...props.upcomingSatellites];
-  
-  if (props.baofengMode) {
-    satellites = satellites.filter(sat => sat.hasFM);
-  }
-  
-  return satellites
-    .sort((a, b) => a.visibleAt.getTime() - b.visibleAt.getTime())
-    .slice(0, 10);
-});
+
+// Already ordered by the parent: visible-now (EOS) satellites first, then upcoming
+// (AOS) satellites, soonest first within each group.
+const visibleSatellites = computed(() => props.skySatellites.slice(0, 10));
 
 function toggleExpanded() {
   expanded.value = !expanded.value;
@@ -64,18 +60,16 @@ function selectSatellite(name: string) {
   emit('select-satellite', name);
 }
 
-function formatVisibilityTime(date: Date): string {
+function formatEventTime(satellite: SkySatellite): string {
   const now = new Date();
-  const diffMs = date.getTime() - now.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  
-  if (diffMins < 60) {
-    return `in ${diffMins} min`;
-  } else {
-    const hours = Math.floor(diffMins / 60);
-    const mins = diffMins % 60;
-    return `in ${hours}h ${mins}m`;
-  }
+  const diffMs = satellite.eventTime.getTime() - now.getTime();
+  const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+
+  const relative = diffMins < 60
+    ? `in ${diffMins} min`
+    : `in ${Math.floor(diffMins / 60)}h ${diffMins % 60}m`;
+
+  return `${satellite.eventType} ${relative}`;
 }
 </script>
 
@@ -98,7 +92,7 @@ function formatVisibilityTime(date: Date): string {
   padding: 8px 12px;
   background-color: #f0f0f0;
   cursor: pointer;
-  
+
   h3 {
     margin: 0;
     font-size: var(--text-ui-size);
@@ -122,11 +116,21 @@ function formatVisibilityTime(date: Date): string {
   align-items: center;
   padding: 8px 12px;
   border-bottom: 1px solid var(--color-divider);
-  
+  border-left: 3px solid transparent;
+
   &:last-child {
     border-bottom: none;
   }
-  
+
+  &.visible-now {
+    background-color: var(--color-accent-tint);
+    border-left-color: var(--color-accent);
+
+    .satellite-time {
+      color: var(--color-accent);
+    }
+  }
+
   .satellite-name {
     flex: 1;
     font-size: var(--text-ui-size);
@@ -135,18 +139,14 @@ function formatVisibilityTime(date: Date): string {
     text-overflow: ellipsis;
     margin-right: 8px;
   }
-  
+
   .satellite-time {
     font-size: var(--text-ui-sm-size);
     color: #666;
     margin-right: 8px;
     white-space: nowrap;
-
-    .satellite-dist {
-      color: #999;
-    }
   }
-  
+
   .track-button {
     background-color: var(--color-primary);
     color: white;
@@ -177,4 +177,4 @@ function formatVisibilityTime(date: Date): string {
     max-width: 100%;
   }
 }
-</style> 
+</style>
