@@ -7,18 +7,16 @@ import { getLatLngObj } from 'tle.js';
 import { satelliteIconUri, arrowIconUri, calculateBearing } from '../utils/icons';
 import type { Map as OlMap } from 'ol';
 
-export interface NearestSatellite {
+export interface MapSkySatellite {
   name: string;
   tle: [string, string];
-  distance?: number;
-  visibleAt?: Date; // Time when satellite will become visible
 }
 
-export class NearestSatellitesFeature {
+export class SkySatellitesFeature {
   private features: Feature[] = [];
   private vectorSource: VectorSource;
   private updateInterval: number | null = null;
-  private satellites: NearestSatellite[] = [];
+  private satellites: MapSkySatellite[] = [];
   private map: OlMap | null = null;
   private onSatelliteClick: ((name: string) => void) | null = null;
   private active: boolean = false;
@@ -52,8 +50,8 @@ export class NearestSatellitesFeature {
     });
   }
 
-  public updateSatellites(nearestSatellites: NearestSatellite[]) {
-    this.satellites = nearestSatellites.slice(0, 10);
+  public updateSatellites(satellites: MapSkySatellite[]) {
+    this.satellites = satellites.slice(0, 10);
     this.updatePositions();
   }
 

@@ -51,7 +51,7 @@ import { createMapLayers, initializeMap, type MapLayers } from './utils/mapSetup
 import { calculateSatelliteInfo } from './utils/calculations';
 import { HomeLocationFeature, type HomeLocationCoordinates } from './features/HomeLocation';
 import { SatelliteFeature, type SatelliteInfo } from './features/SatelliteFeature';
-import { NearestSatellitesFeature } from './features/NearestSatellitesFeature';
+import { SkySatellitesFeature } from './features/SkySatellitesFeature';
 import HomeLocationControl from './controls/HomeLocationControl.vue';
 import SatelliteSelector from './controls/SatelliteSelector.vue';
 import UpcomingSatellitesControl from './controls/UpcomingSatellitesControl.vue';
@@ -75,7 +75,7 @@ const satelliteInfo = ref<SatelliteInfo | null>(null);
 const nextPassEvent = ref<{ type: 'AOS' | 'EOS'; time: Date } | null>(null);
 const passEventRemainingSeconds = ref<number | null>(null);
 const currentSatelliteFeature = ref<SatelliteFeature | null>(null);
-const nearestSatellitesFeature = ref<NearestSatellitesFeature | null>(null);
+const skySatellitesFeature = ref<SkySatellitesFeature | null>(null);
 const skySatellites = ref<SkySatellite[]>([]);
 const fmSatellitesLookup = ref<Record<string, boolean>>({});
 const geoError = ref<string | null>(null);
@@ -571,11 +571,11 @@ async function refreshSkyState(fitView: boolean) {
 
   const mapSats = selectMapSatellites(visibleNow, upcoming);
 
-  if (!nearestSatellitesFeature.value) {
-    nearestSatellitesFeature.value = new NearestSatellitesFeature(mapLayers.vectorSource);
+  if (!skySatellitesFeature.value) {
+    skySatellitesFeature.value = new SkySatellitesFeature(mapLayers.vectorSource);
   }
-  nearestSatellitesFeature.value.updateSatellites(mapSats);
-  nearestSatellitesFeature.value.startTracking();
+  skySatellitesFeature.value.updateSatellites(mapSats);
+  skySatellitesFeature.value.startTracking();
 
   if (!fitView || !mapInstance.value || mapSats.length === 0) return;
 
@@ -756,9 +756,9 @@ watch(selectedSatellite, async (newSatellite) => {
   nextPassEvent.value = null;
   passEventRemainingSeconds.value = null;
 
-  // Stop tracking nearest satellites if we're selecting a specific satellite
-  if (nearestSatellitesFeature.value && newSatellite) {
-    nearestSatellitesFeature.value.stopTracking();
+  // Stop tracking sky satellites shown on the map if we're selecting a specific satellite
+  if (skySatellitesFeature.value && newSatellite) {
+    skySatellitesFeature.value.stopTracking();
   }
 
   if (newSatellite) {
@@ -887,9 +887,9 @@ onMounted(async () => {
     mapInstance.value.getView().setZoom(8);
   }
 
-  nearestSatellitesFeature.value = new NearestSatellitesFeature(mapLayers.vectorSource);
-  nearestSatellitesFeature.value.setMap(mapInstance.value);
-  nearestSatellitesFeature.value.setClickHandler((name) => {
+  skySatellitesFeature.value = new SkySatellitesFeature(mapLayers.vectorSource);
+  skySatellitesFeature.value.setMap(mapInstance.value);
+  skySatellitesFeature.value.setClickHandler((name) => {
     const satellite = satellites.value.find(sat => sat.name === name);
     if (satellite) {
       selectedSatellite.value = { name: satellite.name, tle: satellite.tle };
@@ -915,8 +915,8 @@ onUnmounted(() => {
   if (currentSatelliteFeature.value) {
     currentSatelliteFeature.value.stopTracking();
   }
-  if (nearestSatellitesFeature.value) {
-    nearestSatellitesFeature.value.stopTracking();
+  if (skySatellitesFeature.value) {
+    skySatellitesFeature.value.stopTracking();
   }
   if (upcomingPredictionInterval !== null) {
     window.clearInterval(upcomingPredictionInterval);
