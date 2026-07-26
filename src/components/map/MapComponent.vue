@@ -973,11 +973,6 @@ onUnmounted(() => {
     min-width: 0;
   }
 
-  .ol-zoom {
-    left: 10px !important;
-    bottom: 60px !important;
-  }
-
   .ol-rotate {
     right: 10px !important;
     bottom: 60px !important;
@@ -1025,25 +1020,11 @@ onUnmounted(() => {
   }
 }
 
-.ol-zoom, .ol-rotate {
+.ol-rotate {
   position: absolute !important;
   top: auto !important;
   bottom: 10px !important;
-}
 
-.ol-zoom {
-  left: 10px !important;
-  
-  .ol-zoom-in {
-    border-radius: var(--radius-md) var(--radius-md) 0 0;
-  }
-  
-  .ol-zoom-out {
-    border-radius: 0 0 4px 4px;
-  }
-}
-
-.ol-rotate {
   right: 10px !important;
   
   button {
