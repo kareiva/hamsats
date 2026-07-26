@@ -696,23 +696,30 @@ void updateSkySatellites();
 // Watch for changes in home coordinates
 watch(homeCoordinates, async (newCoords) => {
   if (!newCoords) return;
-  
+
   saveSetting('homeLocation', newCoords);
   elevation.value = null;
-  
-  await fetchElevation(newCoords.lat, newCoords.lon);
-  
-  if (elevation.value !== null) {
-    homeLocationFeature.updateHorizon(elevation.value + aglHeight.value);
-  }
-  
-  // Update satellite distances (for the search dropdown) and show satellites in the
-  // sky on the map if none is selected
+
+  // Show satellites immediately using an approximate (sea-level) observer altitude —
+  // getElevationAngleAt() already treats a null elevation as 0 — rather than waiting on
+  // the elevation lookup, which can take several seconds and barely moves the horizon
+  // angle relative to satellite altitudes of hundreds of km.
   if (satellites.value.length > 0) {
     updateSatelliteDistances(satellites.value);
 
     if (!selectedSatellite.value) {
       await refreshSkyState(true);
+    }
+  }
+
+  await fetchElevation(newCoords.lat, newCoords.lon);
+
+  if (elevation.value !== null) {
+    homeLocationFeature.updateHorizon(elevation.value + aglHeight.value);
+
+    // Refine with the real elevation now that it's in — don't re-fit the view again.
+    if (satellites.value.length > 0 && !selectedSatellite.value) {
+      await refreshSkyState(false);
     }
   }
 }, { deep: true });
