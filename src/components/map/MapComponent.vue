@@ -364,12 +364,6 @@ function clearHomeLocation() {
   satellites.value.forEach(sat => {
     sat.distance = undefined;
   });
-  
-  // Reset map view
-  if (mapInstance.value) {
-    mapInstance.value.getView().setZoom(3);
-    mapInstance.value.getView().setCenter(fromLonLat([0, 0]));
-  }
 }
 
 function requestGeolocation() {
