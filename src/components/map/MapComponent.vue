@@ -269,60 +269,9 @@ async function loadSatellites() {
       }
     }
 
-    // If no valid saved selection or initialization failed, show nearest satellites
+    // If no valid saved selection or initialization failed, show satellites in the sky
     if (!selectedSatellite.value && homeCoordinates.value && satellites.value.length > 0) {
-      if (!nearestSatellitesFeature.value) {
-        nearestSatellitesFeature.value = new NearestSatellitesFeature(mapLayers.vectorSource);
-      }
-      
-      const sortedSats = satellites.value
-        .filter(sat => sat.distance !== undefined)
-        .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
-      const nearestSats = getNearestSatellitesForDisplay(sortedSats);
-
-      nearestSatellitesFeature.value.updateSatellites(nearestSats);
-      nearestSatellitesFeature.value.startTracking();
-
-      // Predict upcoming visible satellites
-      skySatellites.value = await predictSkySatellites();
-      console.log(`Predicted ${skySatellites.value.length} satellites in the sky`);
-
-      // Calculate the extent to include home and all nearest satellites
-      if (mapInstance.value && nearestSats.length > 0) {
-        const homePoint = fromLonLat([homeCoordinates.value.lon, homeCoordinates.value.lat]);
-        let minX = homePoint[0];
-        let minY = homePoint[1];
-        let maxX = homePoint[0];
-        let maxY = homePoint[1];
-
-        // Include all nearest satellites in the extent
-        nearestSats.forEach(sat => {
-          if (sat.position) {
-            const satPoint = fromLonLat([sat.position.lng, sat.position.lat]);
-            minX = Math.min(minX, satPoint[0]);
-            minY = Math.min(minY, satPoint[1]);
-            maxX = Math.max(maxX, satPoint[0]);
-            maxY = Math.max(maxY, satPoint[1]);
-          }
-        });
-
-        // Add padding to the extent
-        const width = maxX - minX;
-        const height = maxY - minY;
-        const padding = [width * 0.2, height * 0.2];
-        const extent = [
-          minX - padding[0],
-          minY - padding[1],
-          maxX + padding[0],
-          maxY + padding[1]
-        ];
-
-        // Fit the view to include all points
-        mapInstance.value.getView().fit(extent, {
-          duration: 1000,
-          padding: [50, 50, 50, 50]
-        });
-      }
+      await refreshSkyState(true);
     }
   } catch (error) {
     console.error('Error parsing satellite data:', error);
@@ -331,21 +280,9 @@ async function loadSatellites() {
   }
 }
 
-// Given satellites already sorted by distance (nearest first), returns the up-to-5
-// nearest ones to display, filtered down to FM-capable satellites when Baofeng mode is on.
-function getNearestSatellitesForDisplay(sortedByDistance: typeof satellites.value): typeof satellites.value {
-  let nearestSats = sortedByDistance.slice(0, baofengMode.value ? 50 : 5); // Get more satellites if in Baofeng mode to filter
-
-  if (baofengMode.value) {
-    // Filter for FM satellites
-    nearestSats = nearestSats.filter(sat =>
-      sat.catalogNumber && fmSatellitesLookup.value[sat.catalogNumber]
-    ).slice(0, 5);
-  }
-
-  return nearestSats;
-}
-
+// Computes distance for every satellite and sorts satellites.value by it — used by the
+// search dropdown (empty search shows nearest satellites first). Map marker selection
+// is handled separately by refreshSkyState(), based on visibility rather than distance.
 async function updateSatelliteDistances(satelliteList: typeof satellites.value) {
   if (!homeCoordinates.value) return;
 
@@ -375,13 +312,6 @@ async function updateSatelliteDistances(satelliteList: typeof satellites.value) 
     if (b.distance === undefined) return -1;
     return a.distance - b.distance;
   });
-
-  // Update nearest satellites feature — only when no satellite is selected;
-  // selecting a satellite calls stopTracking() but keeps the object alive,
-  // and this function runs on every distance recalculation tick.
-  if (nearestSatellitesFeature.value && !selectedSatellite.value) {
-    nearestSatellitesFeature.value.updateSatellites(getNearestSatellitesForDisplay(satelliteList));
-  }
 }
 
 // Fetch elevation data from Open-Elevation API
@@ -522,12 +452,11 @@ function updateAglHeight(height: number) {
 
 // Watch for baofengMode changes
 watch(baofengMode, async (newValue) => {
-  selectedSatellite.value = null;  // Clear satellite selection when mode changes
+  // Clearing the selection triggers the selectedSatellite watcher, which refreshes
+  // both the sky-satellites panel and the map markers for the new mode.
+  selectedSatellite.value = null;
   saveSetting('baofengMode', newValue);
   updateSatelliteDistances(satellites.value);
-  if (homeCoordinates.value) {
-    skySatellites.value = await predictSkySatellites();
-  }
 });
 
 interface SkySatellite {
@@ -556,13 +485,15 @@ async function loadFmSatellitesLookup() {
   }
 }
 
-// Satellites currently above the horizon (with their EOS) sorted first, followed by
-// satellites not yet visible (with their AOS), soonest first within each group. AOS
-// search is capped once enough upcoming candidates are found, since scanning every
-// non-visible satellite to a 24h horizon is expensive; currently-visible satellites are
-// always included since finding their (near) EOS is comparatively cheap.
-async function predictSkySatellites(): Promise<SkySatellite[]> {
-  if (!homeCoordinates.value) return [];
+// Scans all satellites once for the shared underlying data behind both the "Satellites
+// in your sky" panel and the map markers: satellites currently above the horizon (with
+// their EOS), and satellites not yet visible (with their AOS). Both groups are sorted
+// ascending by their own event time (soonest EOS/AOS first). AOS search is capped once
+// enough upcoming candidates are found, since scanning every non-visible satellite to a
+// 24h horizon is expensive; currently-visible satellites are always included since
+// finding their (near) EOS is comparatively cheap.
+async function computeSkySatelliteEvents(): Promise<{ visibleNow: SkySatellite[]; upcoming: SkySatellite[] }> {
+  if (!homeCoordinates.value) return { visibleNow: [], upcoming: [] };
 
   const visibleNow: SkySatellite[] = [];
   const upcoming: SkySatellite[] = [];
@@ -602,7 +533,85 @@ async function predictSkySatellites(): Promise<SkySatellite[]> {
   visibleNow.sort((a, b) => a.eventTime.getTime() - b.eventTime.getTime());
   upcoming.sort((a, b) => a.eventTime.getTime() - b.eventTime.getTime());
 
+  return { visibleNow, upcoming };
+}
+
+// Data for the "Satellites in your sky" panel: visible-now satellites (soonest EOS
+// first), then upcoming satellites (soonest AOS first).
+async function predictSkySatellites(): Promise<SkySatellite[]> {
+  const { visibleNow, upcoming } = await computeSkySatelliteEvents();
   return [...visibleNow, ...upcoming];
+}
+
+// Selects satellites to render as map markers: currently-visible ones ranked by longest
+// remaining time above the horizon (up to 10), padded with the soonest-upcoming
+// satellites if fewer than 5 are currently visible.
+function selectMapSatellites(visibleNow: SkySatellite[], upcoming: SkySatellite[]): SkySatellite[] {
+  const longestRemainingFirst = [...visibleNow].sort((a, b) => b.eventTime.getTime() - a.eventTime.getTime());
+  const selected = longestRemainingFirst.slice(0, 10);
+
+  if (selected.length < 5) {
+    selected.push(...upcoming.slice(0, 5 - selected.length));
+  }
+
+  return selected;
+}
+
+// Refreshes both the sky-satellites panel data and the map markers from a single scan.
+// Set fitView to false for background/periodic refreshes that shouldn't move the camera.
+async function refreshSkyState(fitView: boolean) {
+  if (selectedSatellite.value || !homeCoordinates.value || satellites.value.length === 0) return;
+
+  const { visibleNow, upcoming } = await computeSkySatelliteEvents();
+  skySatellites.value = [...visibleNow, ...upcoming];
+  console.log(`Predicted ${skySatellites.value.length} satellites in the sky`);
+
+  const mapSats = selectMapSatellites(visibleNow, upcoming);
+
+  if (!nearestSatellitesFeature.value) {
+    nearestSatellitesFeature.value = new NearestSatellitesFeature(mapLayers.vectorSource);
+  }
+  nearestSatellitesFeature.value.updateSatellites(mapSats);
+  nearestSatellitesFeature.value.startTracking();
+
+  if (!fitView || !mapInstance.value || mapSats.length === 0) return;
+
+  // Fit the view to include home and all displayed satellites
+  const home = homeCoordinates.value;
+  const homePoint = fromLonLat([home.lon, home.lat]);
+  let minX = homePoint[0];
+  let minY = homePoint[1];
+  let maxX = homePoint[0];
+  let maxY = homePoint[1];
+
+  const now = Date.now();
+  mapSats.forEach(sat => {
+    try {
+      const position = getLatLngObj(sat.tle, now);
+      const satPoint = fromLonLat([position.lng, position.lat]);
+      minX = Math.min(minX, satPoint[0]);
+      minY = Math.min(minY, satPoint[1]);
+      maxX = Math.max(maxX, satPoint[0]);
+      maxY = Math.max(maxY, satPoint[1]);
+    } catch (e) {
+      console.warn(`Failed to compute position for satellite ${sat.name}:`, e);
+    }
+  });
+
+  const width = maxX - minX;
+  const height = maxY - minY;
+  const padding = [width * 0.2, height * 0.2];
+  const extent = [
+    minX - padding[0],
+    minY - padding[1],
+    maxX + padding[0],
+    maxY + padding[1]
+  ];
+
+  mapInstance.value.getView().fit(extent, {
+    duration: 1000,
+    padding: [50, 50, 50, 50]
+  });
 }
 
 function getElevationAngleAt(tle: [string, string], timeMs: number): number {
@@ -699,63 +708,13 @@ watch(homeCoordinates, async (newCoords) => {
     homeLocationFeature.updateHorizon(elevation.value + aglHeight.value);
   }
   
-  // Update satellite distances and show nearest satellites if none selected
+  // Update satellite distances (for the search dropdown) and show satellites in the
+  // sky on the map if none is selected
   if (satellites.value.length > 0) {
     updateSatelliteDistances(satellites.value);
-    
+
     if (!selectedSatellite.value) {
-      if (!nearestSatellitesFeature.value) {
-        nearestSatellitesFeature.value = new NearestSatellitesFeature(mapLayers.vectorSource);
-      }
-      
-      const sortedSats = satellites.value
-        .filter(sat => sat.distance !== undefined)
-        .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
-      const nearestSats = getNearestSatellitesForDisplay(sortedSats);
-
-      nearestSatellitesFeature.value.updateSatellites(nearestSats);
-      nearestSatellitesFeature.value.startTracking();
-
-      // Predict upcoming visible satellites
-      skySatellites.value = await predictSkySatellites();
-      console.log(`Predicted ${skySatellites.value.length} satellites in the sky`);
-
-      // Calculate the extent to include home and all nearest satellites
-      if (mapInstance.value && nearestSats.length > 0) {
-        const homePoint = fromLonLat([newCoords.lon, newCoords.lat]);
-        let minX = homePoint[0];
-        let minY = homePoint[1];
-        let maxX = homePoint[0];
-        let maxY = homePoint[1];
-
-        // Include all nearest satellites in the extent
-        nearestSats.forEach(sat => {
-          if (sat.position) {
-            const satPoint = fromLonLat([sat.position.lng, sat.position.lat]);
-            minX = Math.min(minX, satPoint[0]);
-            minY = Math.min(minY, satPoint[1]);
-            maxX = Math.max(maxX, satPoint[0]);
-            maxY = Math.max(maxY, satPoint[1]);
-          }
-        });
-
-        // Add padding to the extent
-        const width = maxX - minX;
-        const height = maxY - minY;
-        const padding = [width * 0.2, height * 0.2];
-        const extent = [
-          minX - padding[0],
-          minY - padding[1],
-          maxX + padding[0],
-          maxY + padding[1]
-        ];
-
-        // Fit the view to include all points
-        mapInstance.value.getView().fit(extent, {
-          duration: 1000,
-          padding: [50, 50, 50, 50]
-        });
-      }
+      await refreshSkyState(true);
     }
   }
 }, { deep: true });
@@ -844,61 +803,9 @@ watch(selectedSatellite, async (newSatellite) => {
     }
   } else {
     satelliteInfo.value = null;
-    // When no satellite is selected, show the 5 nearest satellites
+    // When no satellite is selected, show satellites in the sky on the map
     if (homeCoordinates.value && satellites.value.length > 0) {
-      if (!nearestSatellitesFeature.value) {
-        nearestSatellitesFeature.value = new NearestSatellitesFeature(mapLayers.vectorSource);
-      }
-      
-      // Get and sort satellites by distance
-      const sortedSats = satellites.value
-        .filter(sat => sat.distance !== undefined)
-        .sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
-      const nearestSats = getNearestSatellitesForDisplay(sortedSats);
-
-      nearestSatellitesFeature.value.updateSatellites(nearestSats);
-      nearestSatellitesFeature.value.startTracking();
-
-      // Predict upcoming visible satellites
-      skySatellites.value = await predictSkySatellites();
-      console.log(`Predicted ${skySatellites.value.length} satellites in the sky`);
-
-      // Calculate the extent to include home and all nearest satellites
-      if (mapInstance.value && nearestSats.length > 0) {
-        const homePoint = fromLonLat([homeCoordinates.value.lon, homeCoordinates.value.lat]);
-        let minX = homePoint[0];
-        let minY = homePoint[1];
-        let maxX = homePoint[0];
-        let maxY = homePoint[1];
-
-        // Include all nearest satellites in the extent
-        nearestSats.forEach(sat => {
-          if (sat.position) {
-            const satPoint = fromLonLat([sat.position.lng, sat.position.lat]);
-            minX = Math.min(minX, satPoint[0]);
-            minY = Math.min(minY, satPoint[1]);
-            maxX = Math.max(maxX, satPoint[0]);
-            maxY = Math.max(maxY, satPoint[1]);
-          }
-        });
-
-        // Add padding to the extent
-        const width = maxX - minX;
-        const height = maxY - minY;
-        const padding = [width * 0.2, height * 0.2];
-        const extent = [
-          minX - padding[0],
-          minY - padding[1],
-          maxX + padding[0],
-          maxY + padding[1]
-        ];
-
-        // Fit the view to include all points
-        mapInstance.value.getView().fit(extent, {
-          duration: 1000,
-          padding: [50, 50, 50, 50]
-        });
-      }
+      await refreshSkyState(true);
     }
   }
 });
@@ -991,9 +898,7 @@ onMounted(async () => {
   // Start periodic updates
   const updateInterval = 60000; // 1 minute
   const updateTimer = setInterval(async () => {
-    if (!selectedSatellite.value && homeCoordinates.value && satellites.value.length > 0) {
-      skySatellites.value = await predictSkySatellites();
-    }
+    await refreshSkyState(false); // Refresh data only — don't move the map view
   }, updateInterval);
 
   // Clean up interval on unmount
