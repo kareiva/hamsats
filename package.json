@@ -11,6 +11,7 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
     "fetch-satellites": "node scripts/fetch-satellites.js",
     "fetch-transponders": "node scripts/fetch-transponders.js",
+    "fetch-amsat-activity": "node scripts/fetch-amsat-activity.js",
     "generate-transponder-lookup": "node scripts/generate-transponder-lookup.js",
     "generate-sitemap": "node scripts/generate-sitemap.js",
     "generate-robots": "node scripts/generate-robots.js",
