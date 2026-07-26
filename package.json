@@ -15,7 +15,8 @@
     "generate-sitemap": "node scripts/generate-sitemap.js",
     "generate-robots": "node scripts/generate-robots.js",
     "generate-seo": "npm run generate-sitemap && npm run generate-robots",
-    "bump-version": "node scripts/bump-version.js"
+    "bump-version": "node scripts/bump-version.js",
+    "test:e2e": "podman run --rm -v \"$PWD\":/app:z -w /app/e2e -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright -e PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 mcr.microsoft.com/playwright:v1.48.0-jammy bash -lc 'npm i @playwright/test@1.48.0 --no-save --no-fund --no-audit >/dev/null; npx playwright test'"
   },
   "dependencies": {
     "ol": "^8.2.0",

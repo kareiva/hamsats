@@ -1,0 +1,9 @@
+[
+  {
+    "description": "ARISS FM Voice Repeater",
+    "alive": true,
+    "mode": "FM",
+    "uplink_mode": "FM",
+    "norad_cat_id": 25544
+  }
+]

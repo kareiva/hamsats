@@ -59,6 +59,9 @@ lib-cov
 /cypress/screenshots/
 /tests/e2e/videos/
 /tests/e2e/screenshots/
+/e2e/test-results/
+/e2e/playwright-report/
+/e2e/blob-report/
 
 # Yarn v2
 .yarn/cache
