@@ -53,7 +53,7 @@ export class NearestSatellitesFeature {
   }
 
   public updateSatellites(nearestSatellites: NearestSatellite[]) {
-    this.satellites = nearestSatellites.slice(0, 5);
+    this.satellites = nearestSatellites.slice(0, 10);
     this.updatePositions();
   }
 
