@@ -1,9 +1,26 @@
 [
   {
+    "description": "Mode U TLM Beacon",
+    "alive": true,
+    "mode": "CW",
+    "uplink_mode": null,
+    "type": "Transmitter",
+    "norad_cat_id": 7530
+  },
+  {
     "description": "Mode V/A (A) Lin SSB",
     "alive": true,
     "mode": "USB",
     "uplink_mode": "USB",
+    "type": "Transponder",
+    "norad_cat_id": 7530
+  },
+  {
+    "description": "13 cm Beacon (40mW)",
+    "alive": true,
+    "mode": "CW",
+    "uplink_mode": null,
+    "type": "Transmitter",
     "norad_cat_id": 7530
   }
 ]
