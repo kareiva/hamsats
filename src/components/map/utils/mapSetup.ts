@@ -71,12 +71,13 @@ export function initializeMap(
     target,
     layers: [
       new TileLayer({
-        // CARTO Positron: light, minimal basemap with country/state borders and labels,
-        // no roads or POI clutter until you zoom in much further than this app needs.
+        // Esri World Light Gray Canvas: free, no API key, light minimal basemap with
+        // borders/labels and no road or POI clutter until much deeper zoom than this
+        // app needs. Note the tile coordinate order is z/y/x, not the usual z/x/y.
         source: new XYZ({
-          url: 'https://{a-c}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+          url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
           attributions: [
-            '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>'
+            'Esri, HERE, Garmin, © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, GIS User Community'
           ],
           crossOrigin: 'anonymous'
         })
